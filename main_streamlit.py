@@ -40,7 +40,7 @@ def create_line_chart(data, column1, column2, title):
 
 def main():
 
-    st.title("译码数据可视化程序")
+    st.title(":blue[译码数据可视化程序] ☕")
 
     # 创建一个输入框来获取header的值
     st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
@@ -61,22 +61,7 @@ def main():
 
         # 显示表格数据的前10行
         st.write("表格数据的前5行：")
-        st.table(data.head())
-
-        # 添加自定义CSS样式
-        st.markdown(
-            """
-            <style>
-            table td:nth-child(odd) {
-                background-color: #f2f2f2;
-            }
-            table td:nth-child(even) {
-                background-color: #ffffff;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+        st.dataframe(data.head())
 
         # 选择列
         with st.sidebar:
