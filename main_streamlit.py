@@ -49,15 +49,19 @@ def main():
 
     st.title("译码数据可视化程序")
 
+    # 创建一个输入框来获取header的值
+    st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
+    header = st.text_input("Enter header value", "0")
+
     # 导入数据
     uploaded_file = st.file_uploader("请选择要导入的数据文件", type=["csv", "xlsx"])
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1]
         if file_extension == "csv":
-            data = pd.read_csv(uploaded_file, header=0)
+            data = pd.read_csv(uploaded_file, header=int(header))
             st.success("数据已成功导入！")
         elif file_extension == "xlsx":
-            data = pd.read_excel(uploaded_file, header=0)
+            data = pd.read_excel(uploaded_file, header=int(header))
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
