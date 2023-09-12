@@ -6,14 +6,6 @@ import plotly.graph_objects as go
 # 设置页面布局
 st.set_page_config(layout="wide", page_title="Data Analysis")
 
-def clean_data(data, columns):
-    # 转换格式并设置时间为索引
-    data['Time'] = pd.to_datetime(data['Time'])
-    # data.columns = data.columns.interpolate(method='linear')
-    data.set_index('Time', inplace=True)
-    data.sort_values('Time', inplace=True)
-    return data
-
 def calculate_difference(data1, column1, column2):
     data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
     data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
@@ -39,8 +31,9 @@ def create_line_chart(data, column1, column2, title):
         showlegend=True,
         width=1200,   # 设置画布宽度为1480像素
         height=600,   # 设置画布高度为800像素
-        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray'),   # 显示x轴网格虚线
-        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray')    # 显示y轴网格虚线
+        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示x轴网格虚线
+        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示y轴网格虚线
+        xaxis_tickangle=45
     )
     # fig.update_yaxes(dtick=20)
     return fig
@@ -58,17 +51,14 @@ def main():
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1]
         if file_extension == "csv":
-            data = pd.read_csv(uploaded_file, header=int(header))
+            data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
             st.success("数据已成功导入！")
         elif file_extension == "xlsx":
-            data = pd.read_excel(uploaded_file, header=int(header))
+            data = pd.read_excel(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
 
-        # 数据清洗
-        columns = data.columns
-        data = clean_data(data, columns)
         # 显示表格数据的前10行
         st.write("表格数据的前5行：")
         st.table(data.head())
@@ -103,8 +93,9 @@ def main():
                 showlegend=True,
                 width=1200,
                 height=600,
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray'),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray')
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
+                xaxis_tickangle=45
             )
             # 显示图表
             st.plotly_chart(fig)
