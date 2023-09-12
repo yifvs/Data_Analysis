@@ -136,6 +136,7 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("Copyright © 2023, 数据可视化   王康业")
+    st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
 
 if __name__ == "__main__":
     main()
