@@ -33,7 +33,7 @@ def create_line_chart(data, column1, column2, title):
         height=600,   # 设置画布高度为800像素
         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示x轴网格虚线
         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示y轴网格虚线
-        xaxis_tickangle=45
+        xaxis_tickangle=45   # 旋转45°
     )
     # fig.update_yaxes(dtick=20)
     return fig
@@ -95,13 +95,11 @@ def main():
 
         if len(columns1) == 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
-
             # 选择图表类型
             chart_type = st.selectbox("请选择计算方式", ["逐行求差", "逐行相除"])
 
             if st.button("生成图表"):
                 if chart_type == "逐行求差":
-
                     # 计算差值并添加到数据中
                     data1 = calculate_difference(data, columns1[0], columns1[1])
                     fig = create_line_chart(data1, columns1[0], columns1[1], "数据差值可视化")
@@ -109,7 +107,6 @@ def main():
                     st.plotly_chart(fig)
 
                 elif chart_type == "逐行相除":
-
                     # 计算比值并添加到数据中
                     data1 = calculate_quotient(data, columns1[0], columns1[1])
                     fig = create_line_chart(data1, columns1[0], columns1[1], "数据比值可视化")
