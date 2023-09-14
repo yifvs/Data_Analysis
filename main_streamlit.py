@@ -40,7 +40,7 @@ def create_line_chart(data, column1, column2, title):
 
 def main():
 
-    st.title(":blue[译码数据可视化程序] ☕")
+    st.title(":blue[译码数据可视化程序] ✈")
 
     # 创建一个输入框来获取header的值
     st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
@@ -117,7 +117,9 @@ def main():
             st.warning("只能选择两列进行计算！")
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("Copyright © 2023, 数据可视化   王康业")
+    st.sidebar.markdown("Copyright © 2023, 数据可视化")
+    st.sidebar.markdown("Co-operator: 黄栋梁")
+    st.sidebar.markdown("Developer: 王康业")
     st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
 
 if __name__ == "__main__":
