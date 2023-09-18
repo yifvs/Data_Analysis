@@ -1,4 +1,4 @@
-streamlit==1.26.0
-openai==0.28.0
-langchain==0.0.288
+streamlit>=1.26.0
+openai
+langchain>=0.0.217
 plotly==5.16.1
