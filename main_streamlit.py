@@ -28,8 +28,8 @@ def main():
             return
 
         # 显示表格数据的前10行
-        st.write("表格数据的前5行：")
-        st.dataframe(data.head())
+        st.write("表格数据：")
+        st.dataframe(data)
 
         # 选择列
         with st.sidebar:
@@ -94,7 +94,7 @@ def main():
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
             # 在侧边栏添加一个文本输入框，允许用户输入运算公式
-            formula = st.sidebar.text_input(":red[输入运算公式（使用列名变量）]")
+            formula = st.sidebar.text_input("输入运算公式（使用列名变量）")
             # 添加一个提交按钮
             if st.sidebar.button("Submit"):
                 if formula:
