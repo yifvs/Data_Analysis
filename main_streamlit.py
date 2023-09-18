@@ -89,12 +89,12 @@ def main():
 
         
         with st.sidebar:
-            columns1 = st.multiselect("请选择要进一步分析的列", data.columns)
+            columns1 = st.multiselect("请选择需要进行计算列", data.columns)
 
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
             # 在侧边栏添加一个文本输入框，允许用户输入运算公式
-            formula = st.sidebar.text_input("输入运算公式（使用列名变量）")
+            formula = st.sidebar.text_input(":red[输入运算公式（使用列名变量）]")
             # 添加一个提交按钮
             if st.sidebar.button("Submit"):
                 if formula:
