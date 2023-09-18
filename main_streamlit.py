@@ -6,38 +6,6 @@ import plotly.graph_objects as go
 # 设置页面布局
 st.set_page_config(layout="wide", page_title="Data Analysis")
 
-# def calculate_difference(data1, column1, column2):
-#     data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
-#     data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
-#     data1[column1] = data1[column1].interpolate(method='linear')
-#     data1[column2] = data1[column2].interpolate(method='linear')
-#     data1['Difference'] = abs(data1[column1] - data1[column2])
-#     return data1
-
-# def calculate_quotient(data1, column1, column2):
-#     data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
-#     data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
-#     data1[column1] = data1[column1].interpolate(method='linear')
-#     data1[column2] = data1[column2].interpolate(method='linear')
-#     data1['Quotient'] = data1[column1] / data1[column2]
-#     return data1
-
-# def create_line_chart(data, column1, column2, title):
-#     fig = go.Figure()
-#     fig.add_trace(go.Scatter(x=data.index, y=data[column1], mode='lines', name=column1))
-#     fig.add_trace(go.Scatter(x=data.index, y=data[column2], mode='lines', name=column2))
-#     fig.update_layout(
-#         title=title,
-#         showlegend=True,
-#         width=1200,   # 设置画布宽度为1480像素
-#         height=600,   # 设置画布高度为800像素
-#         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示x轴网格虚线
-#         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示y轴网格虚线
-#         xaxis_tickangle=45   # 旋转45°
-#     )
-#     # fig.update_yaxes(dtick=20)
-#     return fig
-
 def main():
 
     st.title(":blue[译码数据可视化程序] ✈")
