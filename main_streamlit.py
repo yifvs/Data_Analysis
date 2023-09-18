@@ -6,37 +6,37 @@ import plotly.graph_objects as go
 # 设置页面布局
 st.set_page_config(layout="wide", page_title="Data Analysis")
 
-def calculate_difference(data1, column1, column2):
-    data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
-    data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
-    data1[column1] = data1[column1].interpolate(method='linear')
-    data1[column2] = data1[column2].interpolate(method='linear')
-    data1['Difference'] = abs(data1[column1] - data1[column2])
-    return data1
+# def calculate_difference(data1, column1, column2):
+#     data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
+#     data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
+#     data1[column1] = data1[column1].interpolate(method='linear')
+#     data1[column2] = data1[column2].interpolate(method='linear')
+#     data1['Difference'] = abs(data1[column1] - data1[column2])
+#     return data1
 
-def calculate_quotient(data1, column1, column2):
-    data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
-    data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
-    data1[column1] = data1[column1].interpolate(method='linear')
-    data1[column2] = data1[column2].interpolate(method='linear')
-    data1['Quotient'] = data1[column1] / data1[column2]
-    return data1
+# def calculate_quotient(data1, column1, column2):
+#     data1[column1] = pd.to_numeric(data1[column1], errors='coerce')
+#     data1[column2] = pd.to_numeric(data1[column2], errors='coerce')
+#     data1[column1] = data1[column1].interpolate(method='linear')
+#     data1[column2] = data1[column2].interpolate(method='linear')
+#     data1['Quotient'] = data1[column1] / data1[column2]
+#     return data1
 
-def create_line_chart(data, column1, column2, title):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=data.index, y=data[column1], mode='lines', name=column1))
-    fig.add_trace(go.Scatter(x=data.index, y=data[column2], mode='lines', name=column2))
-    fig.update_layout(
-        title=title,
-        showlegend=True,
-        width=1200,   # 设置画布宽度为1480像素
-        height=600,   # 设置画布高度为800像素
-        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示x轴网格虚线
-        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示y轴网格虚线
-        xaxis_tickangle=45   # 旋转45°
-    )
-    # fig.update_yaxes(dtick=20)
-    return fig
+# def create_line_chart(data, column1, column2, title):
+#     fig = go.Figure()
+#     fig.add_trace(go.Scatter(x=data.index, y=data[column1], mode='lines', name=column1))
+#     fig.add_trace(go.Scatter(x=data.index, y=data[column2], mode='lines', name=column2))
+#     fig.update_layout(
+#         title=title,
+#         showlegend=True,
+#         width=1200,   # 设置画布宽度为1480像素
+#         height=600,   # 设置画布高度为800像素
+#         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示x轴网格虚线
+#         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   # 显示y轴网格虚线
+#         xaxis_tickangle=45   # 旋转45°
+#     )
+#     # fig.update_yaxes(dtick=20)
+#     return fig
 
 def main():
 
@@ -90,31 +90,42 @@ def main():
                 if len(columns) == 0:
                     st.warning("请先选择要分析的列！")
 
+        
         with st.sidebar:
             columns1 = st.multiselect("请选择要进一步分析的列", data.columns)
 
-        if len(columns1) == 2:
+        if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
-            # 选择图表类型
-            chart_type = st.selectbox("请选择计算方式", ["逐行求差", "逐行相除"])
+            # 在侧边栏添加一个文本输入框，允许用户输入运算公式
+            formula = st.sidebar.text_input("输入运算公式（使用列名变量）")
+            # 添加一个提交按钮
+            if st.sidebar.button("Submit"):
+                if formula:
+                    selected_columns = data.columns
+                    for column in selected_columns:
+                        data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
+                        data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+                    try:
+                        # 使用eval函数计算公式并将结果添加为新列
+                        data['计算结果'] = abs(data.eval(formula.replace('//', '/')))
 
-            if st.button("生成图表"):
-                if chart_type == "逐行求差":
-                    # 计算差值并添加到数据中
-                    data1 = calculate_difference(data, columns1[0], columns1[1])
-                    fig = create_line_chart(data1, columns1[0], columns1[1], "数据差值可视化")
-                    fig.add_trace(go.Scatter(x=data.index, y=abs(data1['Difference']), mode='lines', name='Absolute Difference'))
-                    st.plotly_chart(fig)
+                        # 使用Plotly创建图表
+                        fig = px.line(data, x=data.index, y=columns1, title='计算结果图表')
+                        fig.add_trace(go.Scatter(x=data.index, y=data['计算结果'], mode='lines', name='计算结果'))
+                        fig.update_layout(
+                            showlegend=True,
+                            width=1200,
+                            height=600,
+                            xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                                       linecolor='black'),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                                       linecolor='black'),
+                            xaxis_tickangle=45
+                        )
+                        st.plotly_chart(fig)
+                    except Exception as e:
+                        st.error(f"运算出错：{str(e)}")
 
-                elif chart_type == "逐行相除":
-                    # 计算比值并添加到数据中
-                    data1 = calculate_quotient(data, columns1[0], columns1[1])
-                    fig = create_line_chart(data1, columns1[0], columns1[1], "数据比值可视化")
-                    fig.add_trace(go.Scatter(x=data.index, y=abs(data1['Quotient']), mode='lines', name='Ratio'))
-                    st.plotly_chart(fig)
-
-        elif len(columns) > 2:
-            st.warning("只能选择两列进行计算！")
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("Copyright © 2023, 数据可视化")
