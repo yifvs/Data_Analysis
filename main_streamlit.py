@@ -33,7 +33,7 @@ def main():
 
         # 选择列
         with st.sidebar:
-            columns = st.multiselect("请选择要分析的列", data.columns)
+            columns = st.multiselect(":blue[请选择要分析的列（字符串类型参数）]", data.columns)
         if len(columns) > 0:
             st.write(f"已选择的列：{', '.join(columns)}")
 
@@ -48,6 +48,35 @@ def main():
                 height=600,
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
+                xaxis_tickangle=45
+            )
+            # 显示图表
+            st.plotly_chart(fig)
+
+        else:
+            with st.sidebar:
+                if len(columns) == 0:
+                    st.warning("请先选择要分析的列！")
+
+        with st.sidebar:
+            columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
+        if len(columns) > 0:
+            st.write(f"已选择的列：{', '.join(columns)}")
+            selected_columns = data.columns
+            for column in selected_columns:
+                data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
+                data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+            # 使用Plotly绘制图表
+            fig = px.line(data, x=data.index, y=columns, title="数据可视化")
+            # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
+            fig.update_xaxes(rangeslider_visible=True)
+            # 更新布局
+            fig.update_layout(
+                showlegend=True,
+                width=1200,
+                height=600,
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
             )
             # 显示图表
