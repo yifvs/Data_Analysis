@@ -28,9 +28,11 @@ def main():
             st.sidebar.warning("不支持的文件格式！")
             return
 
-        # 显示表格数据的前10行
+        # 显示表格数据
         st.subheader("表格数据：")
-        st.dataframe(data)
+        show_data = st.checkbox('是否显示表格数据', value=False)
+        if show_data:
+            st.dataframe(data)
 
         # 选择列
         with st.sidebar:
@@ -94,7 +96,7 @@ def main():
 
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
-            # 在侧边栏添加4个文本输入框，允许用户输入运算公式
+            # 在侧边栏添加5个文本输入框，允许用户输入运算公式
             formulas = []
             for i in range(5):
                 formula = st.sidebar.text_input(f"输入运算公式{i + 1}（使用列名变量）")
