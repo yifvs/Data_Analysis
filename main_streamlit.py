@@ -28,7 +28,7 @@ def main():
             return
 
         # 显示表格数据的前10行
-        st.write("表格数据：")
+        st.subheader("表格数据：")
         st.dataframe(data)
 
         # 选择列
@@ -46,7 +46,7 @@ def main():
                 showlegend=True,
                 width=1200,
                 height=600,
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),   
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),   
                 xaxis_tickangle=45
             )
@@ -58,7 +58,7 @@ def main():
                 if len(columns) == 0:
                     st.warning("请先选择要分析的列！")
 
-        with st.sidebar:
+                with st.sidebar:
             columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
         if len(columns) > 0:
             st.write(f"已选择的列：{', '.join(columns)}")
@@ -66,6 +66,7 @@ def main():
             for column in selected_columns:
                 data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
                 data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+
             # 使用Plotly绘制图表
             fig = px.line(data, x=data.index, y=columns, title="数据可视化")
             # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
@@ -75,7 +76,7 @@ def main():
                 showlegend=True,
                 width=1200,
                 height=600,
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
             )
@@ -87,41 +88,44 @@ def main():
                 if len(columns) == 0:
                     st.warning("请先选择要分析的列！")
 
-        
         with st.sidebar:
-            columns1 = st.multiselect("请选择需要进行计算列", data.columns)
+            columns1 = st.multiselect("请选择需要计算列", data.columns)
 
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
-            # 在侧边栏添加一个文本输入框，允许用户输入运算公式
-            formula = st.sidebar.text_input("输入运算公式（使用列名变量）")
+            # 在侧边栏添加4个文本输入框，允许用户输入运算公式
+            formulas = []
+            for i in range(5):
+                formula = st.sidebar.text_input(f"输入运算公式{i + 1}（使用列名变量）")
+                formulas.append(formula)
             # 添加一个提交按钮
             if st.sidebar.button("Submit"):
-                if formula:
-                    selected_columns = data.columns
-                    for column in selected_columns:
-                        data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
-                        data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
-                    try:
-                        # 使用eval函数计算公式并将结果添加为新列
-                        data['计算结果'] = abs(data.eval(formula.replace('//', '/')))
-
-                        # 使用Plotly创建图表
-                        fig = px.line(data, x=data.index, y=columns1, title='计算结果图表')
-                        fig.add_trace(go.Scatter(x=data.index, y=data['计算结果'], mode='lines', name='计算结果'))
-                        fig.update_layout(
-                            showlegend=True,
-                            width=1200,
-                            height=600,
-                            xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                       linecolor='black'),
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                       linecolor='black'),
-                            xaxis_tickangle=45
-                        )
-                        st.plotly_chart(fig)
-                    except Exception as e:
-                        st.error(f"运算出错：{str(e)}")
+                selected_columns = data.columns
+                for column in selected_columns:
+                    data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
+                    data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+                try:
+                    fig = px.line(data, x=data.index, y=columns1, title='计算结果图表')
+                    for i, formula in enumerate(formulas):
+                        if formula:
+                            # 使用eval函数计算公式并将结果添加为新列
+                            data[f'计算结果{i + 1}'] = data.eval(formula.replace('//', '/'))
+                            # 将新列的曲线添加到图表中
+                            fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines',
+                                                     name=f'{formula}'))
+                    fig.update_layout(
+                        showlegend=True,
+                        width=1200,
+                        height=600,
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                                   linecolor='black', tickmode='linear', dtick=300),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                                   linecolor='black'),
+                        xaxis_tickangle=45
+                    )
+                    st.plotly_chart(fig)
+                except Exception as e:
+                    st.error(f"运算出错：{str(e)}")
 
 
     st.sidebar.markdown("---")
