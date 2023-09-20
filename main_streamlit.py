@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # 设置页面布局
 st.set_page_config(layout="wide", page_title="Data Analysis")
@@ -105,14 +106,17 @@ def main():
                     data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
                     data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
                 try:
-                    fig = px.line(data, x=data.index, y=columns1, title='计算结果图表')
+                    fig = make_subplots(specs=[[{"secondary_y": True}]])
+                    for column in columns1:
+                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column),
+                                      secondary_y=False)
                     for i, formula in enumerate(formulas):
                         if formula:
                             # 使用eval函数计算公式并将结果添加为新列
                             data[f'计算结果{i + 1}'] = data.eval(formula.replace('//', '/'))
                             # 将新列的曲线添加到图表中
                             fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines',
-                                                     name=f'{formula}'))
+                                                     name=f'{formula}'), secondary_y=True)
                     fig.update_layout(
                         showlegend=True,
                         width=1200,
@@ -121,8 +125,11 @@ def main():
                                    linecolor='black', tickmode='linear', dtick=300),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
                                    linecolor='black'),
+                        yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                                    linecolor='black', overlaying='y', side='right'),
                         xaxis_tickangle=45
                     )
+                    fig.update_xaxes(rangeslider_visible=True)
                     st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
