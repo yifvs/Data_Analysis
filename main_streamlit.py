@@ -58,7 +58,7 @@ def main():
                 if len(columns) == 0:
                     st.warning("请先选择要分析的列！")
 
-                with st.sidebar:
+        with st.sidebar:
             columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
         if len(columns) > 0:
             st.write(f"已选择的列：{', '.join(columns)}")
