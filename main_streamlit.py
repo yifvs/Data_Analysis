@@ -126,7 +126,7 @@ def main():
             with st.sidebar:
                 st.warning("请先选择要自定义的X轴和Y轴！")
 
-        st.sidebar.markdown("---"）  
+        st.sidebar.markdown("---")
 
         with st.sidebar:
             columns1 = st.multiselect(":violet[请选择需要计算列]", data.columns)
