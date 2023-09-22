@@ -91,8 +91,45 @@ def main():
                 if len(columns) == 0:
                     st.warning("请先选择要分析的列！")
 
+        st.sidebar.markdown("---")
+
         with st.sidebar:
-            columns1 = st.multiselect("请选择需要计算列", data.columns)
+            st.caption("自定义X轴和Y轴并生成散点图：")           
+            x_column = st.selectbox(":blue[请选择X轴:]", options=[None]+data.columns.tolist())
+            y_columns = st.multiselect(":blue[请选择Y轴(可多选):]", data.columns)
+        if x_column and y_columns:
+            st.write(f"已选择的列：{x_column}, {', '.join(y_columns)}")
+            selected_data = data[[x_column] + y_columns]
+            selected_data[x_column] = pd.to_numeric(selected_data[x_column], errors='coerce')  
+            selected_data[x_column].interpolate(method='linear', inplace=True)  
+            for column in y_columns:
+                selected_data[column] = pd.to_numeric(selected_data[column], errors='coerce')  
+                selected_data[column].interpolate(method='linear', inplace=True)  
+            fig = go.Figure()
+            for column in y_columns:
+                fig.add_trace(
+                    go.Scatter(x=selected_data[x_column], y=selected_data[column], mode='markers', name=column))
+            fig.update_xaxes(title=x_column)
+            # fig.update_yaxes(title=y_columns)
+            fig.update_layout(
+                showlegend=True,
+                width=1200,
+                height=600,
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                            linecolor='black', tickmode='linear', dtick=5),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
+                            linecolor='black'),
+                xaxis_tickangle=45
+            )
+            st.plotly_chart(fig)
+        else:
+            with st.sidebar:
+                st.warning("请先选择要自定义的X轴和Y轴！")
+
+        st.sidebar.markdown("---"）  
+
+        with st.sidebar:
+            columns1 = st.multiselect(":violet[请选择需要计算列]", data.columns)
 
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
@@ -135,7 +172,6 @@ def main():
                     st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
-
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("Copyright © 2023, 数据可视化")
