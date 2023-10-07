@@ -169,6 +169,8 @@ def main():
                                     linecolor='black', overlaying='y', side='right'),
                         xaxis_tickangle=45
                     )
+                    # 设置Y轴刻度对齐
+                    fig.update_yaxes(matches='y')
                     fig.update_xaxes(rangeslider_visible=True)
                     st.plotly_chart(fig)
                 except Exception as e:
