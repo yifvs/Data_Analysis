@@ -139,7 +139,7 @@ def main():
             for i in range(5):
                 formula = st.sidebar.text_input(f"输入运算公式{i + 1}（使用列名变量）")
                 formulas.append(formula)
-            dtick_value = st.sidebar.text_input(":violet[请输入副轴Y2的刻度间隔值：]")
+            dtick_value = st.sidebar.text_input(":violet[请输入副轴Y2的刻度间隔值(不输入，则默认间隔为10)：]")
             # 添加一个提交按钮
             if st.sidebar.button("Submit"):
                 selected_columns = data.columns
@@ -158,6 +158,12 @@ def main():
                             # 将新列的曲线添加到图表中
                             fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines',
                                                      name=f'{formula}'), secondary_y=True)
+                    
+                    if dtick_value:
+                        dtick_value = float(dtick_value)
+                    else:
+                        dtick_value = 10
+                        
                     fig.update_layout(
                         showlegend=True,
                         width=1200,
@@ -173,10 +179,7 @@ def main():
                     # 设置Y轴刻度对齐
                     fig.update_yaxes(matches='y')
                     fig.update_xaxes(rangeslider_visible=True)
-                    chart_container = st.empty()
-                    chart_container.write(fig)
-                    st.stop()
-                    # st.plotly_chart(fig)
+                    st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
 
