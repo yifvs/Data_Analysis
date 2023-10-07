@@ -130,7 +130,7 @@ def main():
         st.sidebar.markdown("---")
 
         with st.sidebar:
-            columns1 = st.multiselect(":violet[请选择需要计算列]", data.columns)
+            columns1 = st.multiselect(":blue[请选择需要计算列]", data.columns)
 
         if len(columns1) >= 2:
             st.write(f"已选择的列：{', '.join(columns1)}")
@@ -139,6 +139,7 @@ def main():
             for i in range(5):
                 formula = st.sidebar.text_input(f"输入运算公式{i + 1}（使用列名变量）")
                 formulas.append(formula)
+            dtick_value = st.sidebar.text_input(":violet[请输入副轴Y2的刻度间隔值：]")
             # 添加一个提交按钮
             if st.sidebar.button("Submit"):
                 selected_columns = data.columns
@@ -166,13 +167,16 @@ def main():
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
                                    linecolor='black'),
                         yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                    linecolor='black', overlaying='y', side='right'),
+                                    linecolor='black', overlaying='y', side='right', dtick=dtick_value),
                         xaxis_tickangle=45
                     )
                     # 设置Y轴刻度对齐
                     fig.update_yaxes(matches='y')
                     fig.update_xaxes(rangeslider_visible=True)
-                    st.plotly_chart(fig)
+                    chart_container = st.empty()
+                    chart_container.write(fig)
+                    st.stop()
+                    # st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
 
