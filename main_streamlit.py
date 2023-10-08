@@ -77,9 +77,9 @@ def main():
             fig.update_xaxes(rangeslider_visible=True)
             # 更新布局
             fig.update_layout(
-                showlegend=True,
-                width=1200,
-                height=600,
+                showlegend=True,width=1200,height=600,
+                hovermode='x',
+                hoverlabel=dict(bgcolor='white', font=dict(family='Arial', size=12, color='black')),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
