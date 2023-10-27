@@ -70,17 +70,13 @@ def main():
             st.write(f"已选择的列：{', '.join(columns)}")
             selected_columns = data.columns
             # 使用 applymap 方法将 extract_number 函数应用于整个 DataFrame
-            data = data.applymap(extract_number)
+            # data = data.applymap(extract_number)
             for column in selected_columns:
                 data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
                 data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
 
             # 使用Plotly绘制图表
             fig = px.line(data, x=data.index, y=columns, title="数据可视化")
-            # fig = go.Figure()
-            # for column, color in zip(columns, colors):
-            #     fig.add_trace(go.Scatter(x=data.index, y=data[column], name=column, hovertemplate=f"{column}: %{{y}}", line=dict(color=color)))
-
             # 为每个数据点的悬停标签设置个性化的背景颜色
             for i in range(len(fig.data)):
                 fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
@@ -90,7 +86,6 @@ def main():
             fig.update_layout(
                 showlegend=True, width=1200, height=600,
                 hovermode='x',
-                # hoverlabel=dict(bgcolor='white', font=dict(family='Arial', size=12, color='black')),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
