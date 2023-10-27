@@ -114,14 +114,11 @@ def main():
                 selected_data[column].interpolate(method='linear', inplace=True)  
             fig = go.Figure()
             for column in y_columns:
-                fig.add_trace(
-                    go.Scatter(x=selected_data[x_column], y=selected_data[column], mode='markers', name=column))
+                fig.add_trace(go.Scatter(x=selected_data[x_column], y=selected_data[column], mode='markers', name=column))
             fig.update_xaxes(title=x_column)
             # fig.update_yaxes(title=y_columns)
             fig.update_layout(
-                showlegend=True,
-                width=1200,
-                height=600,
+                showlegend=True, width=1200, height=600,
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
                             linecolor='black', tickmode='linear', dtick=5),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
@@ -155,31 +152,28 @@ def main():
                 try:
                     fig = make_subplots(specs=[[{"secondary_y": True}]])
                     for column in columns1:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column),
-                                      secondary_y=False)
+                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
                     for i, formula in enumerate(formulas):
                         if formula:
                             # 使用eval函数计算公式并将结果添加为新列
                             data[f'计算结果{i + 1}'] = data.eval(formula.replace('//', '/'))
                             # 将新列的曲线添加到图表中
-                            fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines',
-                                                     name=f'{formula}'), secondary_y=True)
-                    
+                            fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines', name=f'{formula}'), secondary_y=True)
+                  # 为每个数据点的悬停标签设置个性化的背景颜色  
+                    for i in range(len(fig.data)):
+                        fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
+                        
                     if dtick_value:
                         dtick_value = float(dtick_value)
                     else:
                         dtick_value = 10
                         
                     fig.update_layout(
-                        showlegend=True,
-                        width=1200,
-                        height=600,
-                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                   linecolor='black', tickmode='linear', dtick=300),
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                   linecolor='black'),
-                        yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1,
-                                    linecolor='black', overlaying='y', side='right', dtick=dtick_value),
+                        showlegend=True, width=1200, height=600,
+                        hovermode='x',
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
+                        yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', overlaying='y', side='right', dtick=dtick_value),
                         xaxis_tickangle=45
                     )
                     # 设置Y轴刻度对齐
