@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import re
 
 # 设置页面布局
 st.set_page_config(layout="wide", page_title="Data Analysis")
@@ -68,12 +69,18 @@ def main():
         if len(columns) > 0:
             st.write(f"已选择的列：{', '.join(columns)}")
             selected_columns = data.columns
+            # 使用 applymap 方法将 extract_number 函数应用于整个 DataFrame
+            data = data.applymap(extract_number)
             for column in selected_columns:
                 data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
                 data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
 
             # 使用Plotly绘制图表
             fig = px.line(data, x=data.index, y=columns, title="数据可视化")
+            # fig = go.Figure()
+            # for column, color in zip(columns, colors):
+            #     fig.add_trace(go.Scatter(x=data.index, y=data[column], name=column, hovertemplate=f"{column}: %{{y}}", line=dict(color=color)))
+
             # 为每个数据点的悬停标签设置个性化的背景颜色
             for i in range(len(fig.data)):
                 fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
@@ -81,8 +88,9 @@ def main():
             fig.update_xaxes(rangeslider_visible=True)
             # 更新布局
             fig.update_layout(
-                showlegend=True,width=1200,height=600,
+                showlegend=True, width=1200, height=600,
                 hovermode='x',
+                # hoverlabel=dict(bgcolor='white', font=dict(family='Arial', size=12, color='black')),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
@@ -185,7 +193,15 @@ def main():
                     st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
-
+                    
+# 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
+def extract_number(x):
+    if isinstance(x, str):
+        numbers = re.findall('\d+\.\d+', x)
+        if numbers:
+            return round(float(numbers[0]), 2)    # 使用 round 函数将其精确到小数点后两位
+    return x   # 如果不是字符串类型，则直接返回原始值
+    
     st.sidebar.markdown("---")
     st.sidebar.markdown("Copyright © 2023, 数据可视化")
     st.sidebar.markdown("Co-operator: 黄栋梁")
