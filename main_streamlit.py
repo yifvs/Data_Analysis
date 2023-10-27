@@ -14,6 +14,7 @@ def main():
     # 创建一个输入框来获取header的值
     st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
     header = st.text_input("Enter header value", "0")
+    colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
 
     # 导入数据
     uploaded_file = st.file_uploader("请选择要导入的数据文件", type=["csv", "xlsx"])
@@ -73,13 +74,15 @@ def main():
 
             # 使用Plotly绘制图表
             fig = px.line(data, x=data.index, y=columns, title="数据可视化")
+            # 为每个数据点的悬停标签设置个性化的背景颜色
+            for i in range(len(fig.data)):
+                fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
             # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
             fig.update_xaxes(rangeslider_visible=True)
             # 更新布局
             fig.update_layout(
                 showlegend=True,width=1200,height=600,
                 hovermode='x',
-                hoverlabel=dict(bgcolor='white', font=dict(family='Arial', size=12, color='black')),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                 yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                 xaxis_tickangle=45
