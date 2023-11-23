@@ -182,7 +182,13 @@ def main():
                     st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
-                    
+                        
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("Copyright © 2023, 数据可视化")
+    st.sidebar.markdown("Co-operator: 黄栋梁")
+    st.sidebar.markdown("Developer: 王康业")
+    st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
+
 # 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
 def extract_number(x):
     if isinstance(x, str):
@@ -190,12 +196,6 @@ def extract_number(x):
         if numbers:
             return round(float(numbers[0]), 2)    # 使用 round 函数将其精确到小数点后两位
     return x   # 如果不是字符串类型，则直接返回原始值
-    
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("Copyright © 2023, 数据可视化")
-    st.sidebar.markdown("Co-operator: 黄栋梁")
-    st.sidebar.markdown("Developer: 王康业")
-    st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
 
 if __name__ == "__main__":
     main()
