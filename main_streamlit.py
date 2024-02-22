@@ -25,7 +25,7 @@ def main():
             data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
             st.success("数据已成功导入！")
         elif file_extension == "xlsx":
-            data = pd.read_excel(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
+            data = pd.read_excel(uploaded_file, index_col="Time", header=int(header))
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
