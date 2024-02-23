@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 import re
 
 # 设置页面布局
-st.set_page_config(layout="wide", page_title="Data Analysis")
+st.set_page_config(layout="wide", page_title="Data Analysis", page_icon="📊")
 
 def main():
 
