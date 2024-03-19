@@ -5,3 +5,4 @@ plotly==5.16.1
 pandas
 openpyxl
 xlrd
+pygwalker
