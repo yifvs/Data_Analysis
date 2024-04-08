@@ -1,7 +1,6 @@
 streamlit
 openai
 langchain>=0.0.217; 
-python
 plotly==5.16.1
 pandas
 openpyxl
