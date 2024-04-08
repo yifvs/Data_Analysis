@@ -2,6 +2,7 @@ streamlit
 openai
 langchain>=0.0.217; 
 plotly==5.16.1
+python==3.9
 pandas
 openpyxl
 xlrd
