@@ -90,6 +90,6 @@ if st.button("提交"):
         mac_percentage = calculate_mac(new_balance_arm)
 
         # 展示结果
-        st.write(f"当前飞机总重: {total_weight:.2f} 公斤")
+        st.write(f"当前飞机总重: {total_weight:.2f} KG")
         st.write(f"新的平衡臂: {new_cg:.2f} 英寸")
         st.write(f"新的重心: {mac_percentage:.2f}%")
