@@ -29,7 +29,7 @@ def calculate_mac(balance_arm):
     mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
     return mac_percentage
 
-st.title('737NG飞机重心计算器1.0')
+st.title('737NG飞机重心计算器 V1.0')
 
 # 获取用户输入
 dry_operating_weight = st.number_input("请输入飞机的干使用空重（KG）", min_value=0.0)
@@ -90,6 +90,6 @@ if st.button("提交"):
         mac_percentage = calculate_mac(new_balance_arm)
 
         # 展示结果
-        st.write(f"总重: {total_weight:.2f} 磅")
+        st.write(f"当前飞机总重: {total_weight:.2f} 公斤")
         st.write(f"新的平衡臂: {new_cg:.2f} 英寸")
-        st.write(f"MAC百分比: {mac_percentage:.2f}%")
+        st.write(f"新的重心: {mac_percentage:.2f}%")
