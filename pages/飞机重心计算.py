@@ -7,12 +7,7 @@ def read_fuel_data(file_path, sheet_name):
     return df
 
 # 获取力臂值的函数
-def get_balance_arm(df, volume, unit='gallons'):
-    if unit == 'liters':
-        volume *= 0.264172  # 升转换为加仑
-    elif unit == 'pounds':
-        volume /= 6.7  # 磅转换为加仑（假设燃油密度为6.7磅/加仑）
-
+def get_balance_arm(df, volume):
     closest_row = df.iloc[(df['Volume'] - volume).abs().argmin()]
     balance_arm = closest_row['BA']
     return balance_arm
@@ -29,7 +24,47 @@ def calculate_mac(balance_arm):
     mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
     return mac_percentage
 
-st.title('737NG飞机重心计算器 V1.0')
+st.title('737NG飞机重心计算器 V1.1')
+
+# 添加单位转换器
+st.sidebar.title("单位换算器")
+
+unit_types = {
+    "Mass": {
+        "Kilogram": 1,
+        "Gram": 1000,
+        "Pound": 2.20462,
+        "Ounce": 35.274
+    },
+    "Length": {
+        "Meter": 1,
+        "Kilometer": 0.001,
+        "Centimeter": 100,
+        "Millimeter": 1000,
+        "Mile": 0.000621371,
+        "Yard": 1.09361,
+        "Foot": 3.28084,
+        "Inch": 39.3701
+    },
+    "Density": {
+        "KG/L": 1,
+        "Pound/Gallon": 8.3454  # 1 kg/L = 8.3454 lb/gal
+    }
+}
+
+unit_type = st.sidebar.selectbox("选择单位类型", list(unit_types.keys()))
+units = list(unit_types[unit_type].keys())
+input_value = st.sidebar.number_input("输入值", value=1.0)
+input_unit = st.sidebar.selectbox("输入单位", units)
+output_unit = st.sidebar.selectbox("输出单位", units)
+
+conversion_factor = unit_types[unit_type][output_unit] / unit_types[unit_type][input_unit]
+converted_value = input_value * conversion_factor
+
+st.sidebar.write(f"{input_value} {input_unit} = {converted_value:.2f} {output_unit}")
+
+# 读取Excel文件中的数据
+file_path = 'fuel_balance_arm.xlsx'  # 上传的Excel文件路径
 
 # 获取用户输入
 dry_operating_weight = st.number_input("请输入飞机的干使用空重（KG）", min_value=0.0)
@@ -45,8 +80,7 @@ if st.button("提交"):
     if fuel_density == 0:
         st.error("燃油密度不能为零，请输入一个大于零的值。")
     else:
-        # 读取Excel文件中的数据
-        file_path = 'fuel_balance_arm.xlsx'  # 上传的Excel文件路径
+
         sheet_names = {
             'left_right_us': 'tank1&2 US',
             'left_right_liters': 'tank1&2 L',
@@ -55,7 +89,6 @@ if st.button("提交"):
         }
 
         # 选择适当的Sheet
-        unit = 'gallons'  # 这里其实没用到，后续再改
         left_right_df = read_fuel_data(file_path, sheet_names['left_right_us'])
         center_df = read_fuel_data(file_path, sheet_names['center_us'])
 
@@ -73,8 +106,8 @@ if st.button("提交"):
         # 计算左右主油箱的总燃油体积
         main_tanks_total_volume = left_main_tank_volume + right_main_tank_volume
         # 获取对应的力臂值
-        center_tank_balance_arm = get_balance_arm(center_df, center_tank_volume, unit)
-        main_tanks_balance_arm = get_balance_arm(left_right_df, main_tanks_total_volume, unit)
+        center_tank_balance_arm = get_balance_arm(center_df, center_tank_volume)
+        main_tanks_balance_arm = get_balance_arm(left_right_df, main_tanks_total_volume)
 
         # 计算新的平衡臂
         new_balance_arm = (dry_operating_weight * initial_balance_arm +
@@ -90,6 +123,6 @@ if st.button("提交"):
         mac_percentage = calculate_mac(new_balance_arm)
 
         # 展示结果
-        st.write(f"当前飞机总重: {total_weight:.2f} KG")
+        st.write(f"总重: {total_weight:.2f} KG")
         st.write(f"新的平衡臂: {new_cg:.2f} 英寸")
-        st.write(f"新的重心: {mac_percentage:.2f}%")
+        st.write(f"当前飞机重心: {mac_percentage:.2f}%")
