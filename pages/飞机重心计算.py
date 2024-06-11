@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # 设置页面布局
-st.set_page_config(layout="centered")
+st.set_page_config(page_title="MAC calculate", layout="centered", page_icon="🔎")
 
 # 读取Excel文件中指定的Sheet，并去除列名中的空格
 def read_fuel_data(file_path, sheet_name):
@@ -30,10 +30,11 @@ def calculate_mac(balance_arm):
 st.title('737飞机重心计算器 V2.0')
 
 st.markdown("""
-### 使用说明
+### 📓 :green[使用说明]
 
 * **飞机最新的称重报告查询网址**: https://tdms.hnatechnic.com/login.shtml
 * **路径**：专项管理--->载重平衡控制管理--->单机数据查询
+* **适用机型**：:red[***737NG/737-8***]，后续有空了再开发:violet[***A320/A330***]
 
 ### """, unsafe_allow_html=True)
 
