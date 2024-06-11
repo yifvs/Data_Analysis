@@ -24,7 +24,7 @@ def calculate_mac(balance_arm):
     mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
     return mac_percentage
 
-st.title('737NG飞机重心计算器 V1.1')
+st.title('737NG飞机重心计算器 V2.0')
 
 st.markdown("""
 ### 使用说明
