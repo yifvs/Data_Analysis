@@ -18,7 +18,7 @@ def main():
     colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
 
     # 导入数据
-    uploaded_file = st.file_uploader("请选择要导入的数据文件", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader("📁 请选择要导入的数据文件", type=["csv", "xlsx"])
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1]
         if file_extension == "csv":
