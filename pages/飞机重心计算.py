@@ -31,7 +31,6 @@ st.title('737飞机重心计算器 V2.0')
 
 st.markdown("""
 ### 📓 :green[使用说明]
-
 * **飞机最新的称重报告查询网址**: https://tdms.hnatechnic.com/login.shtml
 * **路径**：专项管理--->载重平衡控制管理--->单机数据查询
 * **适用机型**：:red[***737NG/737-8***]，后续有空了再开发:violet[***A320/A330***]
@@ -39,7 +38,6 @@ st.markdown("""
 ### """, unsafe_allow_html=True)
 
 st.image("Weight Terms.jpg")
-
 st.markdown("* **干使用空重（OEW）**：指除商务载重（旅客、行李及货物）和燃油外飞机做好执行航班前准备的空机重量，包含餐食、饮用水、机载资料等。")
 st.markdown("---")
 
