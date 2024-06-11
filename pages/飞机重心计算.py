@@ -26,6 +26,22 @@ def calculate_mac(balance_arm):
 
 st.title('737NG飞机重心计算器 V1.1')
 
+st.markdown("""
+### 使用说明
+
+* **飞机最新的称重报告查询网址**: https://tdms.hnatechnic.com/login.shtml
+* **路径**：专项管理--->载重平衡控制管理--->单机数据查询
+
+### """, unsafe_allow_html=True)
+
+st.image("Weight Terms.jpg")
+
+st.markdown("* **干使用空重（OEW）**：指除商务载重（旅客、行李及货物）和燃油外飞机做好执行航班前准备的空机重量，包含餐食、饮用水、机载资料等。")
+st.markdown("---")
+
+# 选择飞机型号
+aircraft_type = st.selectbox("选择飞机型号", ["737NG", "737MAX"])
+
 # 添加单位转换器
 st.sidebar.title("单位换算器")
 
@@ -64,7 +80,7 @@ converted_value = input_value * conversion_factor
 st.sidebar.write(f"{input_value} {input_unit} = {converted_value:.2f} {output_unit}")
 
 # 读取Excel文件中的数据
-file_path = 'fuel_balance_arm.xlsx'  # 上传的Excel文件路径
+# file_path = 'fuel_balance_arm.xlsx'  # 上传的Excel文件路径
 
 # 获取用户输入
 dry_operating_weight = st.number_input("请输入飞机的干使用空重（KG）", min_value=0.0)
@@ -80,7 +96,12 @@ if st.button("提交"):
     if fuel_density == 0:
         st.error("燃油密度不能为零，请输入一个大于零的值。")
     else:
-
+        # 读取Excel文件中的数据
+        if aircraft_type == "737NG":
+            file_path = 'fuel_balance_arm.xlsx'
+        else:
+            file_path = '737MAX_fuel_balance_arm.xlsx'
+            
         sheet_names = {
             'left_right_us': 'tank1&2 US',
             'left_right_liters': 'tank1&2 L',
