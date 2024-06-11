@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # 设置页面布局
-st.set_page_config(page_title="MAC calculate", layout="centered", page_icon="🔎")
+st.set_page_config(page_title="MAC calculate", layout="centered", page_icon="📝")
 
 # 读取Excel文件中指定的Sheet，并去除列名中的空格
 def read_fuel_data(file_path, sheet_name):
