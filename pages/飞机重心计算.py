@@ -36,13 +36,13 @@ st.markdown("""
 * **适用机型**：:red[***737NG/737-8***]，后续有空了再开发:violet[***A320/A330/B787***]
 * **WBM版本**：D043A580-HNA1 Rev50, D636A080-HNA1 Rev6
 ### """, unsafe_allow_html=True)
-
+st.warning("This app is still in beta. Please report any bugs to kangy_wang@hnair.com")
 st.image("Weight Terms.jpg")
 st.markdown("* **干使用空重（OEW）**：指除商务载重（旅客、行李及货物）和燃油外飞机做好执行航班前准备的空机重量，包含餐食、饮用水、机载资料等。")
 st.markdown("---")
 
 # 选择飞机型号
-aircraft_type = st.selectbox("选择飞机型号", ["737NG", "737-8", "A320", "A330", "B787-8", "B787-9"])
+aircraft_type = st.selectbox("选择飞机型号", ["737NG", "737-8"])
 
 # 添加单位转换器
 st.sidebar.title("单位换算器")
