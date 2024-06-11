@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 
+# 设置页面布局
+st.set_page_config(layout="centered")
+
 # 读取Excel文件中指定的Sheet，并去除列名中的空格
 def read_fuel_data(file_path, sheet_name):
     df = pd.read_excel(file_path, sheet_name=sheet_name)
@@ -24,7 +27,7 @@ def calculate_mac(balance_arm):
     mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
     return mac_percentage
 
-st.title('737NG飞机重心计算器 V2.0')
+st.title('737飞机重心计算器 V2.0')
 
 st.markdown("""
 ### 使用说明
