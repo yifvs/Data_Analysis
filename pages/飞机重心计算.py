@@ -79,9 +79,6 @@ converted_value = input_value * conversion_factor
 
 st.sidebar.write(f"{input_value} {input_unit} = {converted_value:.2f} {output_unit}")
 
-# 读取Excel文件中的数据
-# file_path = 'fuel_balance_arm.xlsx'  # 上传的Excel文件路径
-
 # 获取用户输入
 dry_operating_weight = st.number_input("请输入飞机的干使用空重（KG）", min_value=0.0)
 center_tank_fuel_weight = st.number_input("请输入中央油箱燃油的重量（KG）", min_value=0.0)
