@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# 设置页面布局
 st.set_page_config(page_title="MAC calculate", layout="centered", page_icon="📝")
 
 # 读取Excel文件中指定的Sheet，并去除列名中的空格
@@ -20,29 +19,57 @@ def calculate_new_cg(dry_weight, initial_arm, fuel_weight, balance_arm, total_we
     new_cg = (dry_weight * initial_arm + fuel_weight * balance_arm) / total_weight
     return new_cg
 
-# 计算MAC百分比的函数
-def calculate_mac(balance_arm):
+# 计算737的MAC百分比的函数
+def calculate_mac_737(balance_arm):
     leading_edge = 627.1
     mac_length = 155.8
     mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
     return mac_percentage
 
-st.title('737飞机重心计算器 V2.0')
+# 计算787-8的MAC百分比的函数
+def calculate_mac_787_8(balance_arm):
+    leading_edge = 1029.8
+    mac_length = 246.9
+    mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
+    return mac_percentage
+
+# 计算787-9的MAC百分比的函数
+def calculate_mac_787_9(balance_arm):
+    leading_edge = 1149.8
+    mac_length = 246.9
+    mac_percentage = ((balance_arm - leading_edge) * 100) / mac_length
+    return mac_percentage
+
+st.title(':blue[飞机重心计算器 V3.0]')
 
 st.markdown("""
-### 📓 :green[使用说明]
-* **飞机最新的称重报告查询网址**: https://tdms.hnatechnic.com/login.shtml
-* **路径**：专项管理--->载重平衡控制管理--->单机数据查询
-* **适用机型**：:red[***737NG/737-8***]，后续有空了再开发:violet[***A320/A330/B787***]
-* **WBM版本**：D043A580-HNA1 Rev50, D636A080-HNA1 Rev6
+### 📓 使用说明
+* **机队最新的称重报告网址**: https://tdms.hnatechnic.com/login.shtml
+* **查询路径**：专项管理--->载重平衡控制管理--->单机数据查询
+* **适用机型**：:red[***737NG/737MAX/B787***]，后续有空了再开发:violet[***A320/A330***]
+* **当前使用的WBM版本**：
+ :red[***737NG***:] D043A580-HNA1 Rev50, 
+ :red[***737-8***:] D636A080-HNA1 Rev6,
+ :red[***787-8***:] D043Z580-HNA1 Rev7,
+ :red[***787-9***:] D043Z590-HNA1 Rev11
 ### """, unsafe_allow_html=True)
 st.warning("This app is still in beta. Please report any bugs to kangy_wang@hnair.com")
-st.image("Weight Terms.jpg")
+st.image(r"C:\Users\40745\Desktop\Weight Terms.jpg")
+
 st.markdown("* **干使用空重（OEW）**：指除商务载重（旅客、行李及货物）和燃油外飞机做好执行航班前准备的空机重量，包含餐食、饮用水、机载资料等。")
 st.markdown("---")
 
 # 选择飞机型号
-aircraft_type = st.selectbox("选择飞机型号", ["737NG", "737-8"])
+aircraft_model = st.selectbox("选择飞机型号", ["737NG", "737MAX", "787-8", "787-9"])
+
+# 设置文件路径
+file_paths = {
+    "737NG": "fuel_balance_arm.xlsx",
+    "737MAX": "737MAX_fuel_balance_arm.xlsx",
+    "787-8": "787_8_fuel_balance_arm.xlsx",
+    "787-9": "787_9_fuel_balance_arm.xlsx"
+}
+file_path = file_paths[aircraft_model]
 
 # 添加单位转换器
 st.sidebar.title("单位换算器")
@@ -88,19 +115,19 @@ left_main_tank_fuel_weight = st.number_input("请输入左主燃油箱的重量�
 right_main_tank_fuel_weight = st.number_input("请输入右主燃油箱的重量（KG）", min_value=0.0)
 initial_cg = st.number_input("请输入初始重心（MAC%）", min_value=0.0)
 initial_balance_arm = st.number_input("请输入初始力臂（BA）", min_value=0.0)
-fuel_density = st.number_input("请输入燃油密度（磅/加仑）", min_value=0.0)
+fuel_density = st.number_input("请输入燃油密度（磅/加仑）", min_value=6.3)
 
 # 添加提交按钮
 if st.button("提交"):
     if fuel_density == 0:
         st.error("燃油密度不能为零，请输入一个大于零的值。")
     else:
-        # 读取Excel文件中的数据
-        if aircraft_type == "737NG":
-            file_path = 'fuel_balance_arm.xlsx'
-        else:
-            file_path = '737MAX_fuel_balance_arm.xlsx'
-            
+        # 转换所有重量到磅
+        dry_operating_weight_pounds = dry_operating_weight * 2.20462
+        center_tank_weight_pounds = center_tank_fuel_weight * 2.20462  # kg 转换为 磅
+        left_main_tank_weight_pounds = left_main_tank_fuel_weight * 2.20462  # kg 转换为 磅
+        right_main_tank_weight_pounds = right_main_tank_fuel_weight * 2.20462  # kg 转换为 磅
+
         sheet_names = {
             'left_right_us': 'tank1&2 US',
             'left_right_liters': 'tank1&2 L',
@@ -116,9 +143,6 @@ if st.button("提交"):
         total_weight = dry_operating_weight + center_tank_fuel_weight + left_main_tank_fuel_weight + right_main_tank_fuel_weight
 
         # 将燃油重量转换为体积（加仑）
-        center_tank_weight_pounds = center_tank_fuel_weight * 2.20462  # kg 转换为 磅
-        left_main_tank_weight_pounds = left_main_tank_fuel_weight * 2.20462  # kg 转换为 磅
-        right_main_tank_weight_pounds = right_main_tank_fuel_weight * 2.20462  # kg 转换为 磅
         center_tank_volume = center_tank_weight_pounds / fuel_density
         left_main_tank_volume = left_main_tank_weight_pounds / fuel_density
         right_main_tank_volume = right_main_tank_weight_pounds / fuel_density
@@ -129,20 +153,22 @@ if st.button("提交"):
         center_tank_balance_arm = get_balance_arm(center_df, center_tank_volume)
         main_tanks_balance_arm = get_balance_arm(left_right_df, main_tanks_total_volume)
 
-        # 计算新的平衡臂
         new_balance_arm = (dry_operating_weight * initial_balance_arm +
                            main_tanks_balance_arm * (left_main_tank_fuel_weight + right_main_tank_fuel_weight) +
                            center_tank_balance_arm * center_tank_fuel_weight) / total_weight
 
-        # 计算新的重心位置
         new_cg = calculate_new_cg(dry_operating_weight, initial_balance_arm,
                                   center_tank_fuel_weight + left_main_tank_fuel_weight + right_main_tank_fuel_weight,
                                   new_balance_arm, total_weight)
 
-        # 计算新的MAC百分比
-        mac_percentage = calculate_mac(new_balance_arm)
+        if aircraft_model in ["737NG", "737MAX"]:
+            mac_percentage = calculate_mac_737(new_balance_arm)
+        elif aircraft_model == "787-8":
+            mac_percentage = calculate_mac_787_8(new_balance_arm)
+        elif aircraft_model == "787-9":
+            mac_percentage = calculate_mac_787_9(new_balance_arm)
 
         # 展示结果
-        st.write(f"总重: {total_weight:.2f} KG")
-        st.write(f"新的平衡臂: {new_cg:.2f} 英寸")
-        st.write(f"当前飞机重心: {mac_percentage:.2f}%")
+        st.write(f"当前飞机总重GW: {total_weight:.2f} KG")
+        st.write(f"新的平衡臂BA: {new_cg:.2f} 英寸")
+        st.write(f"当前飞机重心CG: {mac_percentage:.2f}%")
