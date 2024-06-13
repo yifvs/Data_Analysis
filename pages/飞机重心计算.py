@@ -54,7 +54,7 @@ st.markdown("""
  :red[***787-9***:] D043Z590-HNA1 Rev11
 ### """, unsafe_allow_html=True)
 st.warning("This app is still in beta. Please report any bugs to kangy_wang@hnair.com")
-st.image(r"C:\Users\40745\Desktop\Weight Terms.jpg")
+st.image("Weight Terms.jpg")
 
 st.markdown("* **干使用空重（OEW）**：指除商务载重（旅客、行李及货物）和燃油外飞机做好执行航班前准备的空机重量，包含餐食、饮用水、机载资料等。")
 st.markdown("---")
