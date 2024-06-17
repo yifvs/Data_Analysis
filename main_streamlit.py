@@ -16,7 +16,13 @@ def main():
     st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
     header = st.text_input("Enter header value", "0")
     colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
-
+    
+    # 添加一个输入框来获取要删除的行数
+    st.write("是否要删除无效的干扰数据？请分别在以下两个输入框内输入相应的行数：")
+    # 创建输入框来获取要删除的行数
+    num_rows_to_skip_before = st.number_input("Number of rows to skip（FWD）：", min_value=0, value=0)
+    num_rows_to_skip_after = st.number_input("Number of rows to discard（AFT）：", min_value=0, value=0)
+    
     # 导入数据
     uploaded_file = st.file_uploader("📁 请选择要导入的数据文件", type=["csv", "xlsx"])
     if uploaded_file is not None:
@@ -29,7 +35,15 @@ def main():
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
+        
+        # 删除前面指定的行数
+        if num_rows_to_skip_before > 0:
+            data = data.iloc[num_rows_to_skip_before:]
 
+        # 删除后面指定的行数
+        if num_rows_to_skip_after > 0:
+            data = data.iloc[:-num_rows_to_skip_after]
+            
         # 显示表格数据
         st.subheader("表格数据：")
         show_data = st.checkbox('是否显示表格数据', value=False)
