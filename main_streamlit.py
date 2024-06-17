@@ -17,7 +17,7 @@ def main():
     header = st.text_input("Enter header value", "0")
     colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
     
-    # 添加一个输入框来获取要删除的行数
+    # 添加两个输入框来获取要删除的行数
     st.write("是否要删除无效的干扰数据？请分别在以下两个输入框内输入相应的行数：")
     # 创建输入框来获取要删除的行数
     num_rows_to_skip_before = st.number_input("Number of rows to skip（FWD）：", min_value=0, value=0)
