@@ -8,10 +8,10 @@ st.set_page_config(layout="wide", page_title="批量数据分析", page_icon="�
 def main():
 
     st.title(":blue[批量数据分析] ✈")
-    st.info(":violet[本页面主要用于批量读取译码数据，对比不同航段，单个参数的变化趋势。功能尚未完善，持续更新中...]", icon="🔥")
+    st.write(":violet[本页面主要用于批量读取译码数据，对比不同航段，单个参数的变化趋势]")
 
     # 上传文件
-    uploaded_files = st.file_uploader("📁 同时拖拽多个文档可实现批量上传", type=["csv"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("📁 同时选中并拖拽多个文档可实现批量上传文件", type=["csv"], accept_multiple_files=True)
 
     if uploaded_files:
         # 保存所有文件的数据框
@@ -31,9 +31,17 @@ def main():
             columns = []
             for df in data_frames:
                 columns.extend(df.columns.tolist())
-            selected_columns = st.multiselect("请选择要分析的列（目前只支持数值类型参数）", [""] + columns)
+            columns = list(set(columns))  # 去重
+            selected_columns = st.multiselect("请选择要分析的列（目前只支持数值类型参数）", columns)
             selected_flight_phases = st.multiselect("请选择要分析的FLIGHT_PHASE", ["INTER FLT", "ENG START", "TAXI OUT", "TAKE OFF", "INIT CLIMB", "CLIMB", "CRUISE", "DESCENT", "APPROACH", "FINAL APP", "FLARE", "LANDING", "TAXI IN"])
             st.write(f"已选择的列：{', '.join(selected_columns)}")
+            selected_filter = st.multiselect("是否增加其它筛选条件", columns)
+
+            filter_conditions = {}
+            for filter_option in selected_filter:
+                filter_formula = st.text_input(f"输入筛选公式 ({filter_option})", help=f"例如：{filter_option} > 60 或 {filter_option} == 'AIR'")
+                filter_conditions[filter_option] = filter_formula
+
             generate_chart_button = st.button("生成图表")
             selected_metric = st.selectbox("选择要分析的指标:", ["最大值", "最小值", "平均值", "方差"], index=0)
             data_analysis_button = st.button("数据分析")
@@ -46,6 +54,20 @@ def main():
                     if column in df.columns:
                         df[column] = pd.to_numeric(df[column], errors='coerce')  # 转换为数字类型
                         df[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+
+                # 应用附加的筛选条件
+                for filter_option, filter_formula in filter_conditions.items():
+                    if filter_formula:
+                        try:
+                            # 检查列类型并应用筛选条件
+                            if pd.api.types.is_numeric_dtype(df[filter_option]):
+                                df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+                            df = df.query(filter_formula)
+                        except Exception as e:
+                            st.error(f"筛选公式错误 ({filter_option}): {filter_formula}")
+                            st.error(e)
+                            return
+
                 # 创建Plotly图表对象
                 fig = go.Figure()
                 for column in selected_columns:
@@ -65,6 +87,7 @@ def main():
                         phase_df = df[df['FLIGHT_PHASE'] == phase]
                         for column in selected_columns:
                             fig.add_trace(go.Scatter(x=phase_df.index, y=phase_df[column], mode='lines', name=f"{phase} - {column}", line=dict(color="#ff0000")))
+
                 # 显示图表在页面中
                 st.plotly_chart(fig)
 
@@ -77,6 +100,19 @@ def main():
                 for column in selected_columns:
                     df[column] = pd.to_numeric(df[column], errors='coerce')  # 转换为数字类型
                     df[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
+
+                # 应用附加的筛选条件
+                for filter_option, filter_formula in filter_conditions.items():
+                    if filter_formula:
+                        try:
+                            # 检查列类型并应用筛选条件
+                            if pd.api.types.is_numeric_dtype(df[filter_option]):
+                                df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+                            df = df.query(filter_formula)
+                        except Exception as e:
+                            st.error(f"筛选公式错误 ({filter_option}): {filter_formula}")
+                            st.error(e)
+                            return
 
                 for phase in selected_flight_phases:
                     phase_df = df[df['FLIGHT_PHASE'] == phase]
