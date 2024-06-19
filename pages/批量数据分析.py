@@ -7,7 +7,7 @@ st.set_page_config(layout="wide", page_title="批量数据分析", page_icon="�
 
 def main():
     st.title(":blue[批量数据分析] ✈")
-    st.info(":violet[本页面主要用于批量读取译码数据，对比不同航段参数的变化趋势]")
+    st.info(":violet[本页面主要用于批量读取译码数据，对比不同航段参数的变化趋势]", icon='⚠')
 
     # 上传文件
     uploaded_files = st.file_uploader("📁 同时选中并拖拽多个文档可实现批量上传", type=["csv"], accept_multiple_files=True)
@@ -38,7 +38,7 @@ def main():
 
             filter_conditions = {}
             for filter_option in selected_filter:
-                filter_formula = st.text_input(f"输入筛选公式 ({filter_option})", help="例如：AIR_GND == 'AIR' 或 ENG2N2 > '75'")
+                filter_formula = st.text_input(f"输入筛选公式 ({filter_option})", help="例如：AIR_GND == 'AIR' 或 ENG2N2 > '80'")
                 filter_conditions[filter_option] = filter_formula
 
             generate_chart_button = st.button("生成图表")
@@ -163,5 +163,5 @@ def calculate_metric(series, metric):
     elif metric == "方差":
         return series.var()
 
-if __name__ == "main":
+if __name__ == "__main__":
     main()
