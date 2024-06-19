@@ -6,12 +6,11 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide", page_title="批量数据分析", page_icon="📊")
 
 def main():
-
     st.title(":blue[批量数据分析] ✈")
-    st.write(":violet[本页面主要用于批量读取译码数据，对比不同航段，单个参数的变化趋势]")
+    st.info(":violet[本页面主要用于批量读取译码数据，对比不同航段参数的变化趋势]")
 
     # 上传文件
-    uploaded_files = st.file_uploader("📁 上传文件", type=["csv"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("📁 同时选中并拖拽多个文档可实现批量上传", type=["csv"], accept_multiple_files=True)
 
     if uploaded_files:
         # 保存所有文件的数据框
@@ -39,7 +38,7 @@ def main():
 
             filter_conditions = {}
             for filter_option in selected_filter:
-                filter_formula = st.text_input(f"输入筛选公式 ({filter_option})", help=f"例如：{filter_option}>60")
+                filter_formula = st.text_input(f"输入筛选公式 ({filter_option})", help="例如：AIR_GND == 'AIR' 或 ENG2N2 > '75'")
                 filter_conditions[filter_option] = filter_formula
 
             generate_chart_button = st.button("生成图表")
@@ -54,12 +53,16 @@ def main():
                     if column in df.columns:
                         df[column] = pd.to_numeric(df[column], errors='coerce')  # 转换为数字类型
                         df[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
-                
+
                 # 应用附加的筛选条件
                 for filter_option, filter_formula in filter_conditions.items():
                     if filter_formula:
                         try:
-                            df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+                            # 检查列类型，并根据需要转换类型
+                            if pd.api.types.is_numeric_dtype(df[filter_option]):
+                                df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+
+                            # 应用筛选条件
                             df = df.query(filter_formula)
                         except Exception as e:
                             st.error(f"筛选公式错误 ({filter_option}): {filter_formula}")
@@ -103,7 +106,11 @@ def main():
                 for filter_option, filter_formula in filter_conditions.items():
                     if filter_formula:
                         try:
-                            df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+                            # 检查列类型，并根据需要转换类型
+                            if pd.api.types.is_numeric_dtype(df[filter_option]):
+                                df[filter_option] = pd.to_numeric(df[filter_option], errors='coerce')  # 转换为数字类型
+
+                            # 应用筛选条件
                             df = df.query(filter_formula)
                         except Exception as e:
                             st.error(f"筛选公式错误 ({filter_option}): {filter_formula}")
@@ -156,5 +163,5 @@ def calculate_metric(series, metric):
     elif metric == "方差":
         return series.var()
 
-if __name__ == "__main__":
+if __name__ == "main":
     main()
