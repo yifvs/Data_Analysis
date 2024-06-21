@@ -1,6 +1,5 @@
 streamlit
 openai
-langchain>=0.0.217; 
 plotly==5.16.1
 python_version >= "3.10"
 pandas
