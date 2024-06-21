@@ -6,4 +6,3 @@ pandas
 openpyxl
 xlrd
 pygwalker==0.4.6
-pandasai
