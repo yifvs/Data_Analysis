@@ -3,8 +3,8 @@ import requests
 
 # Coze API 配置
 API_URL = "https://api.coze.cn/open_api/v2/chat"
-BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  # 替换为你的Bearer Token
-BOT_ID = "7385055388376907810"  # 替换为你的Bot ID
+BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  
+BOT_ID = "7385055388376907810"  
 
 def send_to_coze(query):
     headers = {
