@@ -5,8 +5,8 @@ st.set_page_config(page_title="Ask me anything", page_icon="📖", layout="wide"
 
 # Coze API configuration
 API_URL = "https://api.coze.cn/open_api/v2/chat"
-BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  # Replace with your Bearer Token
-BOT_ID = "7385055388376907810"  # Replace with your Bot ID
+BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  
+BOT_ID = "7385055388376907810"  
 
 def send_to_coze(query):
     headers = {
