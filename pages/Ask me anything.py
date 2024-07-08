@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 
+st.set_page_config(page_title="Ask me anything", page_icon="📖", layout="wide")
+
 # Coze API 配置
 API_URL = "https://api.coze.cn/open_api/v2/chat"
 BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  
