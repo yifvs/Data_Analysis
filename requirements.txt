@@ -7,4 +7,4 @@ openpyxl
 xlrd
 pygwalker==0.4.6
 requests
-pandasai
+pandasai==2.2.5
