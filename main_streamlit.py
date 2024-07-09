@@ -26,7 +26,7 @@ def main():
     # 导入数据
     uploaded_file = st.file_uploader("📁 请选择要导入的数据文件", type=["csv", "xlsx"])
     if uploaded_file is not None:
-        file_extension = uploaded_file.name.split(".")[-1]
+        file_extension = uploaded_file.name.split(".")[-1].lower()
         if file_extension == "csv":
             data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
             st.success("数据已成功导入！")
