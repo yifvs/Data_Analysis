@@ -1,7 +1,7 @@
 streamlit
 openai
 plotly==5.16.1
-pandas
+pandas==1.5.3
 openpyxl
 xlrd
 pygwalker==0.4.6
