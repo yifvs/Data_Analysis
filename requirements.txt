@@ -1,9 +1,9 @@
 streamlit
 openai
 plotly==5.16.1
-pandas==1.5.3
+pandas
 openpyxl
 xlrd
 pygwalker==0.4.6
 requests
-pandasai==2.2.5
+pandasai
