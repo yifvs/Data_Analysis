@@ -1,7 +1,6 @@
 streamlit
 openai
 plotly==5.16.1
-python_version >= 3.10
 pandas
 openpyxl
 xlrd
