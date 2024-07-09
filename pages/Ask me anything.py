@@ -29,9 +29,10 @@ def send_to_coze(query):
 
 st.title("📖业哥智能体 V2.0")
 st.caption("🚀 A Streamlit chatbot powered by Coze")
-st.warning("由于“业哥”的解答是基于互联网上搜索的内容，所以输出内容是JSON格式。而JSON格式本身是用于数据交换的，并不直接支持格式化显示。"
+st.info("由于“业哥”的解答是基于互联网上搜索的内容，所以输出内容是JSON格式。而JSON格式本身是用于数据交换的，并不直接支持格式化显示。"
            "JSON格式的数据通常以键值对的形式存在，并且嵌套结构可以非常复杂，如果直接以文本形式展示，会显得比较混乱。"
            "后续我会研究如何解析JSON数据，然后根据数据结构生成相应的Markdown语法，让显示的内容更易读一些。", icon='⚠')
+st.warning("内容由AI生成，无法确保真实准确，仅供参考。")
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
