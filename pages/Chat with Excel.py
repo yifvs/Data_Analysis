@@ -3,7 +3,8 @@ import pandas as pd
 from pandasai import Agent
 
 # 使用Streamlit Secrets Manager获取API密钥
-api_key = st.secrets.get("PANDASAI_API_KEY")
+api_key = "$2a$10$E2dPIwZ1PqoLqySjd1FJw.dFyh7syFoVMC/tDcA4I91fdGF4TSSC."
+# api_key = st.secrets.get("PANDASAI_API_KEY")
 if not api_key:
     st.error("PANDASAI_API_KEY 密钥未设置")
     st.stop()
