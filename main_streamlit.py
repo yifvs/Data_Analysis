@@ -198,7 +198,7 @@ def main():
                     st.error(f"运算出错：{str(e)}")
                         
     st.sidebar.markdown("---")
-    st.sidebar.markdown("Copyright © 2023, 数据可视化")
+    st.sidebar.markdown("Copyright © 2024, 海航航空技术有限公司")
     st.sidebar.markdown("Co-operator: 黄栋梁")
     st.sidebar.markdown("Developer: 王康业")
     st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
