@@ -66,7 +66,7 @@ def homepage():
 
 # 调用streamlit_authenticator库
 authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
-name, authentication_status, username = authenticator.login()
+name, authentication_status, username = authenticator.login(location='sidebar')
 
 # 根据authentication_status状态返回页面
 if authentication_status:
