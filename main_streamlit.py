@@ -199,8 +199,6 @@ def main():
                         
     st.sidebar.markdown("---")
     st.sidebar.markdown("Copyright © 2024, 海航航空技术有限公司")
-    st.sidebar.markdown("Co-operator: 黄栋梁")
-    st.sidebar.markdown("Developer: 王康业")
     st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
 
 # 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
