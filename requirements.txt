@@ -8,3 +8,4 @@ pygwalker==0.4.6
 requests
 pandasai
 pyyaml
+streamlit_authenticator
