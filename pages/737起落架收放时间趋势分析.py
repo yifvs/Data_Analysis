@@ -120,10 +120,8 @@ def main():
             if file_data is not None and 'time' in file_data.columns:
                 all_data = pd.concat([all_data, file_data], ignore_index=True)
 
-        if 'time' in all_data.columns:
+        if not all_data.empty:  # 确保数据框不为空
             all_data.sort_values(by='time', inplace=True)
-        else:
-            st.error("The 'time' column is missing in the dataset.")
 
 
         col1, col2 = st.columns(2)
