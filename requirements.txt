@@ -9,3 +9,4 @@ requests
 pandasai
 pyyaml
 streamlit_authenticator
+python-dateutil
