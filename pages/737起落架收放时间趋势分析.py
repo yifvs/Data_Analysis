@@ -98,7 +98,7 @@ def process_737max_file(uploaded_file):
 # 主函数，用于设置 Streamlit 应用
 def main():
     st.title(':blue[起落架收放时间趋势分析]')
-
+    st.info("受云服务器算力资源限制，上传太大的数据会导致网页崩溃。若有大量数据计算需求，请联系kangy_wang@hnair.com开通本地服务器使用")
     # 添加机型选择下拉框
     aircraft_model = st.selectbox("请选择机型", ("737NG", "737MAX"))
 
