@@ -116,7 +116,8 @@ def main():
             else:
                 file_data = process_737max_file(uploaded_file)
 
-            if file_data is not None:
+            # 在合并 file_data 到 all_data 之前，检查 file_data 是否为 None，并确保它包含 time 列
+            if file_data is not None and 'time' in file_data.columns:
                 all_data = pd.concat([all_data, file_data], ignore_index=True)
 
         all_data.sort_values(by='time', inplace=True)
