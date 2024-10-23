@@ -25,7 +25,7 @@ def process_737ng_file(uploaded_file):
 
     df = pd.read_csv(uploaded_file, header=4, encoding='gb18030')
     df['ENG1N2'] = pd.to_numeric(df['ENG1N2'], errors='coerce')
-    df = df[(df.ENG1N2 > 60) & (df.ENG1N2 < 100)]
+    df = df[(df.ENG1N2 > 60) & (df.ENG1N2 < 102)]
 
     # 筛选爬升阶段的数据
     df1 = df[(df.FLIGHT_PHASE == 'INIT CLIMB') | (df.FLIGHT_PHASE == 'CRUISE') | (df.FLIGHT_PHASE == 'LVL CHANGE')]
@@ -69,7 +69,7 @@ def process_737max_file(uploaded_file):
 
     df = pd.read_csv(uploaded_file, header=4, encoding='gb18030')
     df['N12_C'] = pd.to_numeric(df['N12_C'], errors='coerce')
-    df = df[(df.N12_C > 20) & (df.N12_C < 100)]
+    df = df[(df.N12_C > 20) & (df.N12_C < 102)]
 
     # 筛选爬升阶段的数据
     df1 = df[(df.FLIGHT_PHASE == 'INIT CLIMB') | (df.FLIGHT_PHASE == 'CRUISE') | (df.FLIGHT_PHASE == 'LVL CHANGE')]
