@@ -90,18 +90,39 @@ def main():
                 data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
 
             # 使用Plotly绘制图表
-            fig = px.line(data, x=data.index, y=columns, title="数据可视化")
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+            secondary_axis = st.selectbox(":blue[请选择作为副轴的列（如果有的话）]", options=[None] + columns)
+            primary_axis_columns = list(set(columns) - set([secondary_axis])) if secondary_axis else columns
+
+            for column in primary_axis_columns:
+                fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
+
+            if secondary_axis:
+                fig.add_trace(go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=secondary_axis), secondary_y=True)
+
             # 为每个数据点的悬停标签设置个性化的背景颜色
             for i in range(len(fig.data)):
-                fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
+                fig.data[i].hoverlabel = dict(bgcolor=colors[i % len(colors)], font=dict(size=14, color='black', family='Arial'))
+
             # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
             fig.update_xaxes(rangeslider_visible=True)
             # 更新布局
             fig.update_layout(
                 showlegend=True, width=1200, height=600,
                 hovermode='x',
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
+                xaxis=dict(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
+                    showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300
+                ),
+                yaxis=dict(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
+                    showline=True, linewidth=1, linecolor='black'
+                ),
+                yaxis2=dict(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
+                    showline=True, linewidth=1, linecolor='black', overlaying='y', side='right'
+                ),
                 xaxis_tickangle=45
             )
             # 显示图表
