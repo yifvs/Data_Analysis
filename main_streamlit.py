@@ -219,8 +219,17 @@ def main():
                     st.error(f"运算出错：{str(e)}")
                         
     st.sidebar.markdown("---")
-    st.sidebar.markdown("Copyright © 2024, 海航航空技术有限公司")
+    st.sidebar.markdown("""
+    ### 版权声明
+        
+    Copyright © 2024 海航航空技术有限公司. All Rights Reserved.  
+                            
+    本应用程序受著作权法和其他知识产权法保护。  
+    未经授权，禁止复制、修改或分发本程序的任何部分。
+    """)
     st.sidebar.markdown("Report Bug : kangy_wang@hnair.com")
+    # 添加一些空行来确保版权信息在底部
+    st.sidebar.markdown("<br>" * 5, unsafe_allow_html=True)
 
 # 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
 def extract_number(x):
