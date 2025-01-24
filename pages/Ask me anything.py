@@ -1,82 +1,89 @@
 import streamlit as st
 import requests
-import streamlit_authenticator as stauth
+import json
 
 st.set_page_config(page_title="Ask me anything", page_icon="📖", layout="wide")
 
-# 使用字典来定义用户信息
-credentials = {'usernames': {
-    'kangye': {'logged_in': False,    # 假设用户未登录
-               'name': '管理员1',
-               'password': '123'},
-    'admin': {'logged_in': False,
-              'name': '管理员2',
-              'password': '123'}
-                            }
-                }
-
-# Coze API configuration
-API_URL = "https://api.coze.cn/open_api/v2/chat"  # Coze 聊天接口
-BEARER_TOKEN = "pat_3yBUfdwMT2OuOKjoYp7IoRHqdUIZWefU2D5DEYmJMeD9mlkMDX8S8s0vHBeg83Js"  
-BOT_ID = "7385055388376907810"  
+class CozeConfig:
+    """集中管理Coze配置（使用Streamlit secrets）"""
+    try:
+        # 从secrets读取配置
+        API_URL = "https://api.coze.cn/open_api/v2/chat"
+        BEARER_TOKEN = st.secrets["COZE"]["BEARER_TOKEN"]  # 从secrets读取
+        BOT_ID = st.secrets["COZE"]["BOT_ID"]
+        DEFAULT_USER = st.secrets.get("COZE.USER", "streamlit_user")  # 带默认值
+    except KeyError as e:
+        st.error(f"缺少必要的配置项: {e}")
+        st.stop()
+    except FileNotFoundError:
+        st.error("未找到secrets配置文件，请检查配置")
+        st.stop()
 
 def send_to_coze(query):
+    """发送请求到Coze API并处理响应"""
     headers = {
-        'Authorization': f'Bearer {BEARER_TOKEN}',
+        'Authorization': f'Bearer {CozeConfig.BEARER_TOKEN}',
         'Content-Type': 'application/json',
     }
-    data = {
-        'bot_id': BOT_ID,
-        'user': 'user_example',
+    payload = {
+        'bot_id': CozeConfig.BOT_ID,
+        'user': CozeConfig.DEFAULT_USER,
         'query': query,
         'stream': False
     }
 
-    response = requests.post(API_URL, headers=headers, json=data)
-    response.raise_for_status()
-    response_data = response.json()
+    try:
+        response = requests.post(CozeConfig.API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json().get('messages', [])
+    except requests.exceptions.RequestException as e:
+        st.error(f"API请求失败: {str(e)}")
+        return []
 
-    messages = response_data.get('messages', [])
-    return messages
-
-def homepage():
-    st.title("📖业哥智能体 V2.0")
-    st.caption("🚀 A Streamlit chatbot powered by Coze")
-    st.info("由于“业哥”的解答是基于互联网上搜索的内容，所以输出内容是JSON格式。而JSON格式本身是用于数据交换的，并不直接支持格式化显示。"
-            "JSON格式的数据通常以键值对的形式存在，并且嵌套结构可以非常复杂，如果直接以文本形式展示，会显得比较混乱。"
-           "后续我会研究如何解析JSON数据，然后根据数据结构生成相应的Markdown语法，让显示的内容更易读一些。", icon='⚠')
-    st.warning("内容由AI生成，无法确保真实准确，仅供参考。")
-
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
-
+def display_chat_history():
+    """展示聊天记录"""
     for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+        with st.chat_message(msg["role"]):
+            # 尝试解析JSON内容，失败则原样显示
+            try:
+                content = json.loads(msg["content"])
+                st.markdown(f"```json\n{json.dumps(content, indent=2, ensure_ascii=False)}\n```")
+            except json.JSONDecodeError:
+                st.write(msg["content"])
 
+def handle_user_input():
+    """处理用户输入"""
     if user_input := st.chat_input("请输入你的问题："):
+        # 用户消息处理
         st.session_state.messages.append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
 
-        messages = send_to_coze(user_input)
+        # 带加载状态的AI响应
+        with st.spinner("正在思考中..."):
+            messages = send_to_coze(user_input)
+
+        # AI消息处理
         for message in messages:
             if message.get('role') == 'assistant':
                 content = message.get('content', '没有找到答案。')
                 st.session_state.messages.append({"role": "assistant", "content": content})
                 st.chat_message("assistant").write(content)
 
-# 调用streamlit_authenticator库
-authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
-name, authentication_status, username = authenticator.login(location='sidebar')
+def homepage():
+    st.title("📖维修智能体 V2.0")
+    st.caption("🚀 基于Coze的Streamlit聊天应用")
+    
+    # 警告信息（移动到会话状态初始化前）
+    st.info("""由于Agent的解答是基于互联网搜索内容，当前展示为原始JSON格式。
+            后续将优化为结构化显示。""", icon='⚠')
+    st.warning("内容由AI生成，仅供参考，请核实关键信息。")
 
-# 根据authentication_status状态返回页面
-if authentication_status:
-    with st.sidebar.container():
-        cols1, cols2 = st.columns(2)
-        cols1.write('欢迎 *%s*' % name)
-        with cols2.container():
-            authenticator.logout('注销', 'main')
-    homepage()
-elif authentication_status == False:
-    st.sidebar.error('Username/password is incorrect')
-elif authentication_status == None:
-    st.sidebar.warning('Please enter your username and password')
+    # 初始化会话状态
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+
+    display_chat_history()
+    handle_user_input()
+
+# 直接显示主页
+homepage()
