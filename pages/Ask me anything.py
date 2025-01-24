@@ -120,12 +120,9 @@ def homepage():
     </style>
     """, unsafe_allow_html=True)
     
-    st.title("📖业哥智能体 V2.0")
+    st.title("📖业哥智能体 V3.0")
     st.caption("🚀 基于Coze的Streamlit聊天应用")
-    
-    # 警告信息（移动到会话状态初始化前）
-    st.info("""由于Agent的解答是基于知识库搜索内容，当前展示为原始JSON格式。
-            后续将优化为结构化显示。""", icon='⚠')
+
     st.warning("内容由AI生成，仅供参考，请核实关键信息。")
 
     # 初始化会话状态
