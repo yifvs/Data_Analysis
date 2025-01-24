@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 
-st.set_page_config(page_title="Ask me anything", page_icon="📖", layout="wide")
+st.set_page_config(page_title="Ask me anything（Beta）", page_icon="📖", layout="wide")
 
 class CozeConfig:
     """集中管理Coze配置（使用Streamlit secrets）"""
