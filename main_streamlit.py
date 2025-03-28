@@ -55,8 +55,11 @@ def main():
             columns = st.multiselect(":blue[请选择要分析的列（字符串类型参数）]", data.columns)
         if len(columns) > 0:
             st.write(f"已选择的列：{', '.join(columns)}")
+            for column in columns:
+                # 确保所有列都转换为字符串类型，避免类型不一致的问题
+                data[column] = data[column].astype(str)
             # 向后填充空值
-            data[columns] = data[columns].fillna(method='ffill')
+            # data[columns] = data[columns].fillna(method='ffill')
             # 使用Plotly绘制图表
             fig = px.line(data, x=data.index, y=columns, title="数据可视化")
             # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
