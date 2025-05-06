@@ -28,10 +28,16 @@ def main():
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1].lower()
         if file_extension == "csv":
-            data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
+            try:
+                data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
+            except ValueError:
+                data = pd.read_csv(uploaded_file, index_col="TIME", header=int(header), encoding='gb18030')
             st.success("数据已成功导入！")
         elif file_extension == "xlsx":
-            data = pd.read_excel(uploaded_file, index_col="Time", header=int(header))
+            try:
+                data = pd.read_excel(uploaded_file, index_col="Time", header=int(header))
+            except ValueError:
+                data = pd.read_excel(uploaded_file, index_col="TIME", header=int(header))
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
