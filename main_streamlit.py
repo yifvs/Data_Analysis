@@ -61,14 +61,137 @@ def main():
             string_columns = st.multiselect(":blue[请选择要分析的列（字符串类型参数）]", data.columns)
             numeric_columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
             
+            # 添加多子图显示选项
+            multi_subplot_mode = st.checkbox(":green[启用多子图显示模式（每个参数独立Y轴）]", value=False)
+            if multi_subplot_mode:
+                st.info("多子图模式：每个参数将使用独立的Y轴，但共享X轴进行同步缩放")
+            
         # 检查是否选择了任何列
         if len(string_columns) > 0 or len(numeric_columns) > 0:
-            # 创建子图布局
-            subplot_count = 0
-            if len(string_columns) > 0:
-                subplot_count += 1
-            if len(numeric_columns) > 0:
-                subplot_count += 1
+            # 合并所有选择的列
+            all_selected_columns = string_columns + numeric_columns
+            
+            # 多子图显示模式
+            if multi_subplot_mode and len(all_selected_columns) > 0:
+                st.write(f"多子图模式 - 已选择的列：{', '.join(all_selected_columns)}")
+                
+                # 数据预处理
+                for column in string_columns:
+                    data[column] = data[column].astype(str)
+                
+                for column in numeric_columns:
+                    data[column] = pd.to_numeric(data[column], errors='coerce')
+                    data[column].interpolate(method='linear', inplace=True)
+                
+                # 创建多子图布局（每个参数一个子图）
+                subplot_count = len(all_selected_columns)
+                fig = make_subplots(
+                    rows=subplot_count, cols=1,
+                    shared_xaxes=True,
+                    vertical_spacing=0.02,
+                    subplot_titles=[f"{col}" for col in all_selected_columns]
+                )
+                
+                # 为每个参数添加子图
+                for i, column in enumerate(all_selected_columns):
+                    row_num = i + 1
+                    
+                    if column in string_columns:
+                        # 字符串类型数据转换为数值
+                        string_values = [hash(str(val)) % 1000 for val in data[column]]
+                        fig.add_trace(
+                            go.Scatter(
+                                x=data.index, 
+                                y=string_values, 
+                                mode='lines+markers', 
+                                name=column,
+                                line=dict(color=colors[i % len(colors)], width=2),
+                                marker=dict(size=4)
+                            ),
+                            row=row_num, col=1
+                        )
+                        # 设置Y轴标题
+                        fig.update_yaxes(
+                            title_text=f"{column} (Hash值)",
+                            showgrid=True, gridwidth=1, gridcolor='lightgray',
+                            showline=True, linewidth=1, linecolor='black',
+                            row=row_num, col=1
+                        )
+                    else:
+                        # 数值类型数据
+                        fig.add_trace(
+                            go.Scatter(
+                                x=data.index, 
+                                y=data[column], 
+                                mode='lines+markers', 
+                                name=column,
+                                line=dict(color=colors[i % len(colors)], width=2),
+                                marker=dict(size=4)
+                            ),
+                            row=row_num, col=1
+                        )
+                        # 设置Y轴标题
+                        fig.update_yaxes(
+                            title_text=column,
+                            showgrid=True, gridwidth=1, gridcolor='lightgray',
+                            showline=True, linewidth=1, linecolor='black',
+                            row=row_num, col=1
+                        )
+                
+                # 为每个数据点的悬停标签设置个性化的背景颜色
+                for i in range(len(fig.data)):
+                    fig.data[i].hoverlabel = dict(
+                        bgcolor=colors[i % len(colors)], 
+                        font=dict(size=12, color='white', family='Arial')
+                    )
+                
+                # 更新X轴（只在最底部显示标签和滑动条）
+                for i in range(subplot_count):
+                    row_num = i + 1
+                    if row_num == subplot_count:  # 最后一个子图
+                        fig.update_xaxes(
+                            showgrid=True, gridwidth=1, gridcolor='lightgray',
+                            showline=True, linewidth=1, linecolor='black',
+                            tickmode='linear', dtick=300, tickangle=45,
+                            rangeslider_visible=True,
+                            title_text="时间",
+                            row=row_num, col=1
+                        )
+                    else:
+                        fig.update_xaxes(
+                            showgrid=True, gridwidth=1, gridcolor='lightgray',
+                            showline=True, linewidth=1, linecolor='black',
+                            tickmode='linear', dtick=300,
+                            showticklabels=False,  # 隐藏中间子图的X轴标签
+                            row=row_num, col=1
+                        )
+                
+                # 更新整体布局
+                fig.update_layout(
+                    showlegend=True, 
+                    width=1200, 
+                    height=200 * subplot_count + 100,  # 动态调整高度
+                    hovermode='x unified',
+                    title="多子图模式 - 每个参数独立Y轴",
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                st.plotly_chart(fig)
+                
+            # 原有的显示模式
+            elif not multi_subplot_mode:
+                # 创建子图布局
+                subplot_count = 0
+                if len(string_columns) > 0:
+                    subplot_count += 1
+                if len(numeric_columns) > 0:
+                    subplot_count += 1
                 
             if subplot_count == 1:
                 # 只有一种类型的数据
@@ -145,7 +268,7 @@ def main():
                 
                 # 添加字符串类型数据到第一个子图
                 for i, column in enumerate(string_columns):
-                    # 将字符串转换为数值以便绘图（这里简单地使用hash值）
+                    # 将字符串转换为数值以便绘图（使用hash值）
                     string_values = [hash(str(val)) % 1000 for val in data[column]]
                     fig.add_trace(
                         go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)])),
@@ -208,7 +331,6 @@ def main():
                     )
                 
                 st.plotly_chart(fig)
-                
         else:
             with st.sidebar:
                 st.warning("请先选择要分析的列！")
