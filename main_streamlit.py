@@ -58,89 +58,160 @@ def main():
 
         # 选择列
         with st.sidebar:
-            columns = st.multiselect(":blue[请选择要分析的列（字符串类型参数）]", data.columns)
-        if len(columns) > 0:
-            st.write(f"已选择的列：{', '.join(columns)}")
-            for column in columns:
-                # 确保所有列都转换为字符串类型，避免类型不一致的问题
-                data[column] = data[column].astype(str)
-            # 向后填充空值
-            # data[columns] = data[columns].fillna(method='ffill')
-            # 使用Plotly绘制图表
-            fig = px.line(data, x=data.index, y=columns, title="数据可视化")
-            # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
-            fig.update_xaxes(rangeslider_visible=True)
-            # 更新布局
-            fig.update_layout(
-                showlegend=True,
-                width=1200,
-                height=600,
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),  # dtick=300参数来设置刻度的时间间隔为5分钟
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
-                xaxis_tickangle=45
-            )
-            # 显示图表
-            st.plotly_chart(fig)
-
+            string_columns = st.multiselect(":blue[请选择要分析的列（字符串类型参数）]", data.columns)
+            numeric_columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
+            
+        # 检查是否选择了任何列
+        if len(string_columns) > 0 or len(numeric_columns) > 0:
+            # 创建子图布局
+            subplot_count = 0
+            if len(string_columns) > 0:
+                subplot_count += 1
+            if len(numeric_columns) > 0:
+                subplot_count += 1
+                
+            if subplot_count == 1:
+                # 只有一种类型的数据
+                if len(string_columns) > 0:
+                    # 只有字符串类型数据
+                    st.write(f"已选择的字符串列：{', '.join(string_columns)}")
+                    for column in string_columns:
+                        data[column] = data[column].astype(str)
+                    
+                    fig = px.line(data, x=data.index, y=string_columns, title="字符串类型数据可视化")
+                    fig.update_xaxes(rangeslider_visible=True)
+                    fig.update_layout(
+                        showlegend=True, width=1200, height=600,
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
+                        xaxis_tickangle=45
+                    )
+                    st.plotly_chart(fig)
+                    
+                elif len(numeric_columns) > 0:
+                    # 只有数值类型数据
+                    st.write(f"已选择的数值列：{', '.join(numeric_columns)}")
+                    selected_columns = data.columns
+                    for column in selected_columns:
+                        data[column] = pd.to_numeric(data[column], errors='coerce')
+                        data[column].interpolate(method='linear', inplace=True)
+                    
+                    fig = make_subplots(specs=[[{"secondary_y": True}]])
+                    secondary_axis = st.selectbox(":blue[请选择作为副轴的列（如果有的话）]", options=[None] + numeric_columns)
+                    primary_axis_columns = list(set(numeric_columns) - set([secondary_axis])) if secondary_axis else numeric_columns
+                    
+                    for column in primary_axis_columns:
+                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
+                    
+                    if secondary_axis:
+                        fig.add_trace(go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=secondary_axis), secondary_y=True)
+                    
+                    for i in range(len(fig.data)):
+                        fig.data[i].hoverlabel = dict(bgcolor=colors[i % len(colors)], font=dict(size=14, color='black', family='Arial'))
+                    
+                    fig.update_xaxes(rangeslider_visible=True)
+                    fig.update_layout(
+                        showlegend=True, width=1200, height=600, hovermode='x',
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot', showline=True, linewidth=1, linecolor='black'),
+                        yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot', showline=True, linewidth=1, linecolor='black', overlaying='y', side='right'),
+                        xaxis_tickangle=45
+                    )
+                    st.plotly_chart(fig)
+                    
+            else:
+                # 两种类型的数据都有，创建共享X轴的子图
+                st.write(f"已选择的字符串列：{', '.join(string_columns)}")
+                st.write(f"已选择的数值列：{', '.join(numeric_columns)}")
+                
+                # 数据预处理
+                for column in string_columns:
+                    data[column] = data[column].astype(str)
+                
+                selected_columns = data.columns
+                for column in selected_columns:
+                    if column in numeric_columns:
+                        data[column] = pd.to_numeric(data[column], errors='coerce')
+                        data[column].interpolate(method='linear', inplace=True)
+                
+                # 创建共享X轴的子图
+                fig = make_subplots(
+                    rows=2, cols=1,
+                    shared_xaxes=True,
+                    vertical_spacing=0.1,
+                    subplot_titles=("字符串类型参数", "数值类型参数"),
+                    specs=[[{"secondary_y": False}], [{"secondary_y": True}]]
+                )
+                
+                # 添加字符串类型数据到第一个子图
+                for i, column in enumerate(string_columns):
+                    # 将字符串转换为数值以便绘图（这里简单地使用hash值）
+                    string_values = [hash(str(val)) % 1000 for val in data[column]]
+                    fig.add_trace(
+                        go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)])),
+                        row=1, col=1
+                    )
+                
+                # 添加数值类型数据到第二个子图
+                secondary_axis = st.selectbox(":blue[请选择作为副轴的列（如果有的话）]", options=[None] + numeric_columns)
+                primary_axis_columns = list(set(numeric_columns) - set([secondary_axis])) if secondary_axis else numeric_columns
+                
+                for i, column in enumerate(primary_axis_columns):
+                    fig.add_trace(
+                        go.Scatter(x=data.index, y=data[column], mode='lines', name=f"数值-{column}", line=dict(color=colors[(i + len(string_columns)) % len(colors)])),
+                        row=2, col=1, secondary_y=False
+                    )
+                
+                if secondary_axis:
+                    fig.add_trace(
+                        go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=f"数值副轴-{secondary_axis}", line=dict(color=colors[(len(primary_axis_columns) + len(string_columns)) % len(colors)])),
+                        row=2, col=1, secondary_y=True
+                    )
+                
+                # 为每个数据点的悬停标签设置个性化的背景颜色
+                for i in range(len(fig.data)):
+                    fig.data[i].hoverlabel = dict(bgcolor=colors[i % len(colors)], font=dict(size=14, color='black', family='Arial'))
+                
+                # 更新布局
+                fig.update_layout(
+                    showlegend=True, width=1200, height=800,
+                    hovermode='x unified',
+                    title="同步X轴的多类型数据可视化"
+                )
+                
+                # 更新X轴（只需要更新底部的X轴，因为是共享的）
+                fig.update_xaxes(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray', 
+                    showline=True, linewidth=1, linecolor='black', 
+                    tickmode='linear', dtick=300, tickangle=45,
+                    rangeslider_visible=True, row=2, col=1
+                )
+                
+                # 更新Y轴
+                fig.update_yaxes(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray',
+                    showline=True, linewidth=1, linecolor='black',
+                    title="字符串值（Hash）", row=1, col=1
+                )
+                
+                fig.update_yaxes(
+                    showgrid=True, gridwidth=1, gridcolor='lightgray',
+                    showline=True, linewidth=1, linecolor='black',
+                    title="数值", row=2, col=1, secondary_y=False
+                )
+                
+                if secondary_axis:
+                    fig.update_yaxes(
+                        showgrid=True, gridwidth=1, gridcolor='lightgray',
+                        showline=True, linewidth=1, linecolor='black',
+                        title=f"副轴-{secondary_axis}", row=2, col=1, secondary_y=True
+                    )
+                
+                st.plotly_chart(fig)
+                
         else:
             with st.sidebar:
-                if len(columns) == 0:
-                    st.warning("请先选择要分析的列！")
-
-        with st.sidebar:
-            columns = st.multiselect(":blue[请选择要分析的列（数值类型参数）]", data.columns)
-        if len(columns) > 0:
-            st.write(f"已选择的列：{', '.join(columns)}")
-            selected_columns = data.columns
-            # 使用 applymap 方法将 extract_number 函数应用于整个 DataFrame
-            # data = data.applymap(extract_number)
-            for column in selected_columns:
-                data[column] = pd.to_numeric(data[column], errors='coerce')  # 转换为数字类型
-                data[column].interpolate(method='linear', inplace=True)  # 使用线性插值填充空值
-
-            # 使用Plotly绘制图表
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-            secondary_axis = st.selectbox(":blue[请选择作为副轴的列（如果有的话）]", options=[None] + columns)
-            primary_axis_columns = list(set(columns) - set([secondary_axis])) if secondary_axis else columns
-
-            for column in primary_axis_columns:
-                fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
-
-            if secondary_axis:
-                fig.add_trace(go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=secondary_axis), secondary_y=True)
-
-            # 为每个数据点的悬停标签设置个性化的背景颜色
-            for i in range(len(fig.data)):
-                fig.data[i].hoverlabel = dict(bgcolor=colors[i % len(colors)], font=dict(size=14, color='black', family='Arial'))
-
-            # 添加一个滑动条，实现在图表上进行缩放和选择日期范围
-            fig.update_xaxes(rangeslider_visible=True)
-            # 更新布局
-            fig.update_layout(
-                showlegend=True, width=1200, height=600,
-                hovermode='x',
-                xaxis=dict(
-                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
-                    showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300
-                ),
-                yaxis=dict(
-                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
-                    showline=True, linewidth=1, linecolor='black'
-                ),
-                yaxis2=dict(
-                    showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot',
-                    showline=True, linewidth=1, linecolor='black', overlaying='y', side='right'
-                ),
-                xaxis_tickangle=45
-            )
-            # 显示图表
-            st.plotly_chart(fig)
-
-        else:
-            with st.sidebar:
-                if len(columns) == 0:
-                    st.warning("请先选择要分析的列！")
+                st.warning("请先选择要分析的列！")
 
         st.sidebar.markdown("---")
 
