@@ -103,10 +103,9 @@ def main():
                             go.Scatter(
                                 x=data.index, 
                                 y=string_values, 
-                                mode='lines+markers', 
+                                mode='lines',
                                 name=column,
-                                line=dict(color=colors[i % len(colors)], width=2),
-                                marker=dict(size=4)
+                                line=dict(color=colors[i % len(colors)], width=2)
                             ),
                             row=row_num, col=1
                         )
@@ -123,10 +122,9 @@ def main():
                             go.Scatter(
                                 x=data.index, 
                                 y=data[column], 
-                                mode='lines+markers', 
+                                mode='lines',
                                 name=column,
-                                line=dict(color=colors[i % len(colors)], width=2),
-                                marker=dict(size=4)
+                                line=dict(color=colors[i % len(colors)], width=2)
                             ),
                             row=row_num, col=1
                         )
@@ -153,7 +151,7 @@ def main():
                             showgrid=True, gridwidth=1, gridcolor='lightgray',
                             showline=True, linewidth=1, linecolor='black',
                             tickmode='linear', dtick=300, tickangle=45,
-                            rangeslider_visible=True,
+                            rangeslider=dict(visible=True, thickness=0.1),
                             title_text="时间",
                             row=row_num, col=1
                         )
@@ -171,7 +169,7 @@ def main():
                     showlegend=True, 
                     width=1200, 
                     height=200 * subplot_count + 100,  # 动态调整高度
-                    hovermode='x unified',
+                    hovermode='x',
                     title="多子图模式 - 每个参数独立Y轴",
                     legend=dict(
                         orientation="h",
@@ -201,8 +199,8 @@ def main():
                     for column in string_columns:
                         data[column] = data[column].astype(str)
                     
-                    fig = px.line(data, x=data.index, y=string_columns, title="字符串类型数据可视化")
-                    fig.update_xaxes(rangeslider_visible=True)
+                    fig = px.line(data, x=data.index, y=string_columns, title="字符串类型数据可视化", line_shape='linear')
+                    fig.update_xaxes(rangeslider=dict(visible=True, thickness=0.1))
                     fig.update_layout(
                         showlegend=True, width=1200, height=600,
                         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
@@ -224,15 +222,15 @@ def main():
                     primary_axis_columns = list(set(numeric_columns) - set([secondary_axis])) if secondary_axis else numeric_columns
                     
                     for column in primary_axis_columns:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
+                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column, line=dict(width=2)),secondary_y=False)
                     
                     if secondary_axis:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=secondary_axis), secondary_y=True)
+                        fig.add_trace(go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=secondary_axis, line=dict(width=1)), secondary_y=True)
                     
                     for i in range(len(fig.data)):
                         fig.data[i].hoverlabel = dict(bgcolor=colors[i % len(colors)], font=dict(size=14, color='black', family='Arial'))
                     
-                    fig.update_xaxes(rangeslider_visible=True)
+                    fig.update_xaxes(rangeslider=dict(visible=True, thickness=0.1))
                     fig.update_layout(
                         showlegend=True, width=1200, height=600, hovermode='x',
                         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dot', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
@@ -271,7 +269,7 @@ def main():
                     # 将字符串转换为数值以便绘图（使用hash值）
                     string_values = [hash(str(val)) % 1000 for val in data[column]]
                     fig.add_trace(
-                        go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)])),
+                        go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)], width=2)),
                         row=1, col=1
                     )
                 
@@ -280,14 +278,13 @@ def main():
                 primary_axis_columns = list(set(numeric_columns) - set([secondary_axis])) if secondary_axis else numeric_columns
                 
                 for i, column in enumerate(primary_axis_columns):
-                    fig.add_trace(
-                        go.Scatter(x=data.index, y=data[column], mode='lines', name=f"数值-{column}", line=dict(color=colors[(i + len(string_columns)) % len(colors)])),
+                    fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=f"数值-{column}", line=dict(color=colors[(i + len(string_columns)) % len(colors)], width=2)),
                         row=2, col=1, secondary_y=False
                     )
                 
                 if secondary_axis:
                     fig.add_trace(
-                        go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=f"数值副轴-{secondary_axis}", line=dict(color=colors[(len(primary_axis_columns) + len(string_columns)) % len(colors)])),
+                        go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=f"数值副轴-{secondary_axis}", line=dict(color=colors[(len(primary_axis_columns) + len(string_columns)) % len(colors)], width=2)),
                         row=2, col=1, secondary_y=True
                     )
                 
@@ -298,7 +295,7 @@ def main():
                 # 更新布局
                 fig.update_layout(
                     showlegend=True, width=1200, height=800,
-                    hovermode='x unified',
+                    hovermode='x',
                     title="同步X轴的多类型数据可视化"
                 )
                 
@@ -307,7 +304,7 @@ def main():
                     showgrid=True, gridwidth=1, gridcolor='lightgray', 
                     showline=True, linewidth=1, linecolor='black', 
                     tickmode='linear', dtick=300, tickangle=45,
-                    rangeslider_visible=True, row=2, col=1
+                    rangeslider=dict(visible=True, thickness=0.1), row=2, col=1
                 )
                 
                 # 更新Y轴
@@ -389,13 +386,13 @@ def main():
                 try:
                     fig = make_subplots(specs=[[{"secondary_y": True}]])
                     for column in columns1:
-                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column), secondary_y=False)
+                        fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=column, line=dict(width=2)),secondary_y=False)
                     for i, formula in enumerate(formulas):
                         if formula:
                             # 使用eval函数计算公式并将结果添加为新列
                             data[f'计算结果{i + 1}'] = data.eval(formula.replace('//', '/'))
                             # 将新列的曲线添加到图表中
-                            fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines', name=f'{formula}'), secondary_y=True)
+                            fig.add_trace(go.Scatter(x=data.index, y=data[f'计算结果{i + 1}'], mode='lines', name=f'{formula}', line=dict(width=2)), secondary_y=True)
                   # 为每个数据点的悬停标签设置个性化的背景颜色  
                     for i in range(len(fig.data)):
                         fig.data[i].hoverlabel = dict(bgcolor=colors[i], font=dict(size=14, color='black', family='Arial'))
@@ -415,7 +412,7 @@ def main():
                     )
                     # 设置Y轴刻度对齐
                     fig.update_yaxes(matches='y')
-                    fig.update_xaxes(rangeslider_visible=True)
+                    fig.update_xaxes(rangeslider=dict(visible=True, thickness=0.1))
                     st.plotly_chart(fig)
                 except Exception as e:
                     st.error(f"运算出错：{str(e)}")
