@@ -11,20 +11,42 @@ st.set_page_config(layout="wide", page_title="Data Analysis", page_icon="📊")
 def main():
 
     st.title(":blue[译码数据可视化程序] ✈")
-
-    # 创建一个输入框来获取header的值
-    st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4：")
-    header = st.text_input("Enter header value", "4")
+    st.markdown("---")
+    
+    # 使用列布局优化界面
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown("### 📋 数据配置")
+        # 创建一个输入框来获取header的值
+        st.markdown("**列名行位置设置**")
+        header = st.selectbox(
+            "请选择数据表格中列名所在的行：",
+            options=["0", "4"],
+            index=1,
+            format_func=lambda x: f"第{x}行 ({'手动译码数据' if x=='0' else '自动译码数据'})"
+        )
+        
+    with col2:
+        st.markdown("### 🗑️ 数据清理")
+        # 添加两个输入框来获取要删除的行数
+        st.markdown("**无效数据删除设置**")
+        col2_1, col2_2 = st.columns(2)
+        with col2_1:
+            num_rows_to_skip_before = st.number_input("前部删除行数", min_value=0, value=0, help="删除数据开头的无效行")
+        with col2_2:
+            num_rows_to_skip_after = st.number_input("尾部删除行数", min_value=0, value=0, help="删除数据末尾的无效行")
+    
     colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
     
-    # 添加两个输入框来获取要删除的行数
-    st.write("是否要删除无效的干扰数据？请分别在以下两个输入框内输入相应的行数：")
-    # 创建输入框来获取要删除的行数
-    num_rows_to_skip_before = st.number_input("Number of rows to skip（FWD）：", min_value=0, value=0)
-    num_rows_to_skip_after = st.number_input("Number of rows to discard（AFT）：", min_value=0, value=0)
-    
+    st.markdown("---")
+    st.markdown("### 📁 文件上传")
     # 导入数据
-    uploaded_file = st.file_uploader("📁 请选择要导入的数据文件", type=["csv", "xlsx"])
+    uploaded_file = st.file_uploader(
+        "请选择要导入的数据文件", 
+        type=["csv", "xlsx"],
+        help="支持CSV和Excel文件格式"
+    )
     if uploaded_file is not None:
         file_extension = uploaded_file.name.split(".")[-1].lower()
         if file_extension == "csv":
