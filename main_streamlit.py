@@ -13,8 +13,8 @@ def main():
     st.title(":blue[译码数据可视化程序] ✈")
 
     # 创建一个输入框来获取header的值
-    st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4或5：")
-    header = st.text_input("Enter header value", "0")
+    st.write("请输入数据表格中，列名位于第几行？手动译码数据输入0，自动译码数据则输入4：")
+    header = st.text_input("Enter header value", "4")
     colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
     
     # 添加两个输入框来获取要删除的行数
@@ -29,15 +29,15 @@ def main():
         file_extension = uploaded_file.name.split(".")[-1].lower()
         if file_extension == "csv":
             try:
-                data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), encoding='gb18030')
+                data = pd.read_csv(uploaded_file, index_col="Time", header=int(header), dtype='str', encoding='gb18030')
             except ValueError:
-                data = pd.read_csv(uploaded_file, index_col="TIME", header=int(header), encoding='gb18030')
+                data = pd.read_csv(uploaded_file, index_col="TIME", header=int(header), dtype='str', encoding='gb18030')
             st.success("数据已成功导入！")
         elif file_extension == "xlsx":
             try:
-                data = pd.read_excel(uploaded_file, index_col="Time", header=int(header))
+                data = pd.read_excel(uploaded_file, index_col="Time", header=int(header), dtype='str')
             except ValueError:
-                data = pd.read_excel(uploaded_file, index_col="TIME", header=int(header))
+                data = pd.read_excel(uploaded_file, index_col="TIME", header=int(header), dtype='str')
         else:
             st.sidebar.warning("不支持的文件格式！")
             return
@@ -65,6 +65,12 @@ def main():
             multi_subplot_mode = st.checkbox(":green[启用多子图显示模式（每个参数独立Y轴）]", value=False)
             if multi_subplot_mode:
                 st.info("多子图模式：每个参数将使用独立的Y轴，但共享X轴进行同步缩放")
+                # 添加紧凑模式选项
+                compact_mode = st.checkbox(":orange[启用紧凑模式（两列显示）]", value=False)
+                if compact_mode:
+                    st.info("紧凑模式：子图将分为两列显示，节省垂直空间")
+            else:
+                compact_mode = False
             
         # 检查是否选择了任何列
         if len(string_columns) > 0 or len(numeric_columns) > 0:
@@ -81,40 +87,61 @@ def main():
                 
                 for column in numeric_columns:
                     data[column] = pd.to_numeric(data[column], errors='coerce')
-                    data[column].interpolate(method='linear', inplace=True)
+                    data[column] = data[column].interpolate(method='linear')
                 
                 # 创建多子图布局（每个参数一个子图）
                 subplot_count = len(all_selected_columns)
-                fig = make_subplots(
-                    rows=subplot_count, cols=1,
-                    shared_xaxes=True,
-                    vertical_spacing=0.02,
-                    subplot_titles=[f"{col}" for col in all_selected_columns]
-                )
+                if compact_mode:
+                    # 紧凑模式：两列布局
+                    rows = (subplot_count + 1) // 2  # 向上取整
+                    cols = 2 if subplot_count > 1 else 1
+                    fig = make_subplots(
+                        rows=rows, cols=cols,
+                        shared_xaxes=True,
+                        vertical_spacing=0.05,
+                        horizontal_spacing=0.05
+                    )
+                else:
+                    # 标准模式：单列布局
+                    fig = make_subplots(
+                        rows=subplot_count, cols=1,
+                        shared_xaxes=True,
+                        vertical_spacing=0.02
+                    )
                 
                 # 为每个参数添加子图
                 for i, column in enumerate(all_selected_columns):
-                    row_num = i + 1
+                    if compact_mode:
+                        # 紧凑模式：计算行列位置
+                        row_num = (i // 2) + 1
+                        col_num = (i % 2) + 1
+                    else:
+                        # 标准模式：单列布局
+                        row_num = i + 1
+                        col_num = 1
                     
                     if column in string_columns:
-                        # 字符串类型数据转换为数值
+                        # 字符串类型数据转换为数值，但保留原始值用于悬停
                         string_values = [hash(str(val)) % 1000 for val in data[column]]
+                        original_strings = [str(val) for val in data[column]]
                         fig.add_trace(
                             go.Scatter(
                                 x=data.index, 
                                 y=string_values, 
                                 mode='lines',
                                 name=column,
-                                line=dict(color=colors[i % len(colors)], width=2)
+                                line=dict(color=colors[i % len(colors)], width=2),
+                                customdata=original_strings,
+                                hovertemplate=f'{column}: %{{customdata}}<br>Hash值: %{{y}}<extra></extra>'
                             ),
-                            row=row_num, col=1
+                            row=row_num, col=col_num
                         )
                         # 设置Y轴标题
                         fig.update_yaxes(
-                            title_text=f"{column} (Hash值)",
+                            title_text=f"{column}",
                             showgrid=True, gridwidth=1, gridcolor='lightgray',
                             showline=True, linewidth=1, linecolor='black',
-                            row=row_num, col=1
+                            row=row_num, col=col_num
                         )
                     else:
                         # 数值类型数据
@@ -124,16 +151,17 @@ def main():
                                 y=data[column], 
                                 mode='lines',
                                 name=column,
-                                line=dict(color=colors[i % len(colors)], width=2)
+                                line=dict(color=colors[i % len(colors)], width=2),
+                                hovertemplate=f'{column}: %{{y}}<extra></extra>'
                             ),
-                            row=row_num, col=1
+                            row=row_num, col=col_num
                         )
                         # 设置Y轴标题
                         fig.update_yaxes(
                             title_text=column,
                             showgrid=True, gridwidth=1, gridcolor='lightgray',
                             showline=True, linewidth=1, linecolor='black',
-                            row=row_num, col=1
+                            row=row_num, col=col_num
                         )
                 
                 # 为每个数据点的悬停标签设置个性化的背景颜色
@@ -144,33 +172,65 @@ def main():
                     )
                 
                 # 更新X轴（只在最底部显示标签和滑动条）
-                for i in range(subplot_count):
-                    row_num = i + 1
-                    if row_num == subplot_count:  # 最后一个子图
-                        fig.update_xaxes(
-                            showgrid=True, gridwidth=1, gridcolor='lightgray',
-                            showline=True, linewidth=1, linecolor='black',
-                            tickmode='linear', dtick=300, tickangle=45,
-                            rangeslider=dict(visible=True, thickness=0.1),
-                            title_text="时间",
-                            row=row_num, col=1
-                        )
-                    else:
-                        fig.update_xaxes(
-                            showgrid=True, gridwidth=1, gridcolor='lightgray',
-                            showline=True, linewidth=1, linecolor='black',
-                            tickmode='linear', dtick=300,
-                            showticklabels=False,  # 隐藏中间子图的X轴标签
-                            row=row_num, col=1
-                        )
+                if compact_mode:
+                    rows = (subplot_count + 1) // 2
+                    cols = 2 if subplot_count > 1 else 1
+                    for i in range(subplot_count):
+                        row_num = (i // 2) + 1
+                        col_num = (i % 2) + 1
+                        if row_num == rows:  # 最后一行的子图
+                            fig.update_xaxes(
+                                showgrid=True, gridwidth=1, gridcolor='lightgray',
+                                showline=True, linewidth=1, linecolor='black',
+                                tickmode='linear', dtick=300, tickangle=45,
+                                rangeslider=dict(visible=True, thickness=0.1),
+                                title_text="时间",
+                                row=row_num, col=col_num
+                            )
+                        else:
+                            fig.update_xaxes(
+                                showgrid=True, gridwidth=1, gridcolor='lightgray',
+                                showline=True, linewidth=1, linecolor='black',
+                                tickmode='linear', dtick=300,
+                                showticklabels=False,
+                                row=row_num, col=col_num
+                            )
+                else:
+                    for i in range(subplot_count):
+                        row_num = i + 1
+                        if row_num == subplot_count:  # 最后一个子图
+                            fig.update_xaxes(
+                                showgrid=True, gridwidth=1, gridcolor='lightgray',
+                                showline=True, linewidth=1, linecolor='black',
+                                tickmode='linear', dtick=300, tickangle=45,
+                                rangeslider=dict(visible=True, thickness=0.1),
+                                title_text="时间",
+                                row=row_num, col=1
+                            )
+                        else:
+                            fig.update_xaxes(
+                                showgrid=True, gridwidth=1, gridcolor='lightgray',
+                                showline=True, linewidth=1, linecolor='black',
+                                tickmode='linear', dtick=300,
+                                showticklabels=False,  # 隐藏中间子图的X轴标签
+                                row=row_num, col=1
+                            )
                 
                 # 更新整体布局
+                if compact_mode:
+                    rows = (subplot_count + 1) // 2
+                    height = 300 * rows + 100
+                    title = "多子图模式（紧凑布局） - 每个参数独立Y轴"
+                else:
+                    height = 200 * subplot_count + 100
+                    title = "多子图模式 - 每个参数独立Y轴"
+                
                 fig.update_layout(
                     showlegend=True, 
                     width=1200, 
-                    height=200 * subplot_count + 100,  # 动态调整高度
-                    hovermode='x',
-                    title="多子图模式 - 每个参数独立Y轴",
+                    height=height,
+                    hovermode='x',  # 改为'x'模式以实现更好的联动
+                    title=title,
                     legend=dict(
                         orientation="h",
                         yanchor="bottom",
@@ -253,23 +313,24 @@ def main():
                 for column in selected_columns:
                     if column in numeric_columns:
                         data[column] = pd.to_numeric(data[column], errors='coerce')
-                        data[column].interpolate(method='linear', inplace=True)
+                        data[column] = data[column].interpolate(method='linear')
                 
                 # 创建共享X轴的子图
                 fig = make_subplots(
                     rows=2, cols=1,
                     shared_xaxes=True,
                     vertical_spacing=0.1,
-                    subplot_titles=("字符串类型参数", "数值类型参数"),
+                    # subplot_titles=("字符串类型参数", "数值类型参数"),
                     specs=[[{"secondary_y": False}], [{"secondary_y": True}]]
                 )
                 
                 # 添加字符串类型数据到第一个子图
                 for i, column in enumerate(string_columns):
-                    # 将字符串转换为数值以便绘图（使用hash值）
+                    # 将字符串转换为数值以便绘图（使用hash值），但保留原始值用于悬停
                     string_values = [hash(str(val)) % 1000 for val in data[column]]
+                    original_strings = [str(val) for val in data[column]]
                     fig.add_trace(
-                        go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)], width=2)),
+                        go.Scatter(x=data.index, y=string_values, mode='lines', name=f"字符串-{column}", line=dict(color=colors[i % len(colors)], width=2), customdata=original_strings, hovertemplate=f'{column}: %{{customdata}}<br>Hash值: %{{y}}<extra></extra>'),
                         row=1, col=1
                     )
                 
@@ -278,13 +339,13 @@ def main():
                 primary_axis_columns = list(set(numeric_columns) - set([secondary_axis])) if secondary_axis else numeric_columns
                 
                 for i, column in enumerate(primary_axis_columns):
-                    fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=f"数值-{column}", line=dict(color=colors[(i + len(string_columns)) % len(colors)], width=2)),
+                    fig.add_trace(go.Scatter(x=data.index, y=data[column], mode='lines', name=f"数值-{column}", line=dict(color=colors[(i + len(string_columns)) % len(colors)], width=2), hovertemplate=f'{column}: %{{y}}<extra></extra>'),
                         row=2, col=1, secondary_y=False
                     )
                 
                 if secondary_axis:
                     fig.add_trace(
-                        go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=f"数值副轴-{secondary_axis}", line=dict(color=colors[(len(primary_axis_columns) + len(string_columns)) % len(colors)], width=2)),
+                        go.Scatter(x=data.index, y=data[secondary_axis], mode='lines', name=f"数值副轴-{secondary_axis}", line=dict(color=colors[(len(primary_axis_columns) + len(string_columns)) % len(colors)], width=2), hovertemplate=f'{secondary_axis}: %{{y}}<extra></extra>'),
                         row=2, col=1, secondary_y=True
                     )
                 
@@ -295,7 +356,7 @@ def main():
                 # 更新布局
                 fig.update_layout(
                     showlegend=True, width=1200, height=800,
-                    hovermode='x',
+                    hovermode='x unified',
                     title="同步X轴的多类型数据可视化"
                 )
                 
@@ -404,7 +465,7 @@ def main():
                         
                     fig.update_layout(
                         showlegend=True, width=1200, height=600,
-                        hovermode='x',
+                        hovermode='x unified',
                         xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', tickmode='linear', dtick=300),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black'),
                         yaxis2=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', showline=True, linewidth=1, linecolor='black', overlaying='y', side='right', dtick=dtick_value),
@@ -427,13 +488,13 @@ def main():
     # 添加一些空行来确保版权信息在底部
     st.sidebar.markdown("<br>" * 5, unsafe_allow_html=True)
 
-# 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
-def extract_number(x):
-    if isinstance(x, str):
-        numbers = re.findall('\d+\.\d+', x)
-        if numbers:
-            return round(float(numbers[0]), 2)    # 使用 round 函数将其精确到小数点后两位
-    return x   # 如果不是字符串类型，则直接返回原始值
+# # 接受一个参数 x，并检查该参数是否为字符串类型。如果是字符串类型，则使用正则表达式提取小数部分，并返回第一个匹配的小数
+# def extract_number(x):
+#     if isinstance(x, str):
+#         numbers = re.findall('\d+\.\d+', x)
+#         if numbers:
+#             return round(float(numbers[0]), 2)    # 使用 round 函数将其精确到小数点后两位
+#     return x   # 如果不是字符串类型，则直接返回原始值
 
 if __name__ == "__main__":
     main()
