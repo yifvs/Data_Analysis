@@ -172,8 +172,11 @@ def process_chat_input(user_input, data, model_provider="LangChain", deepseek_mo
     try:
         # 使用LangChain + DeepSeek模式
         if model_provider == "LangChain" and LANGCHAIN_AVAILABLE:
-            # 优先使用用户提供的API Key，否则使用内置API Key
-            api_key = deepseek_api_key if deepseek_api_key else "sk-88888888888888888888888888888888"   # 如果本地部署，这里可以填写自己的API KEY，省去每次输入
+            api_key = st.text_input(
+                "请输入DeepSeek API密钥", 
+                type="password",
+                help="您可以从DeepSeek官网获取API密钥"
+            )
             model = deepseek_model or "deepseek-chat"
             
             # 设置LLM
