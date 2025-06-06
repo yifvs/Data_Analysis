@@ -11,3 +11,4 @@ pyyaml
 streamlit_authenticator
 python-dateutil
 langchain
+langchain-community
