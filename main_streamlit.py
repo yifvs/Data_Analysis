@@ -172,11 +172,11 @@ def process_chat_input(user_input, data, model_provider="LangChain", deepseek_mo
     try:
         # 使用LangChain + DeepSeek模式
         if model_provider == "LangChain" and LANGCHAIN_AVAILABLE:
-            api_key = st.text_input(
-                "请输入DeepSeek API密钥", 
-                type="password",
-                help="您可以从DeepSeek官网获取API密钥"
-            )
+            # 必须使用用户提供的API Key
+            api_key = deepseek_api_key
+            if not api_key:
+                response['content'] = "❌ 请在侧边栏输入DeepSeek API密钥后再使用AI分析功能。"
+                return response
             model = deepseek_model or "deepseek-chat"
             
             # 设置LLM
@@ -272,8 +272,10 @@ def main():
         with col2_2:
             num_rows_to_skip_after = st.number_input("尾部删除行数", min_value=0, value=0, help="删除数据末尾的无效行")
     
-    # colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
-    colors = px.colors.qualitative.Set1  # 使用默认的配色顺序（Set1 - 明亮鲜艳，Set2 - 柔和，Bold - 大胆鲜明）
+    # 使用Plotly的默认颜色序列，提供更专业的颜色搭配
+    # Use Plotly's default color sequence for more professional color schemes
+    # colors = px.colors.qualitative.Plotly  # 或者可以选择其他颜色序列如：Set1, Set2, Pastel1, Dark2等
+    colors = px.colors.qualitative.Set1
     
     st.markdown("---")
     st.markdown("### 📁 文件上传")
@@ -428,29 +430,34 @@ def main():
                 # 大模型选择
                 model_provider = st.selectbox(
                     "选择大模型提供商：",
-                    options=["DeepSeek"],
-                    help="DeepSeek提供强大的对话能力"
+                    options=["LangChain", "DeepSeek"],
+                    help="选择您偏好的大模型接口方式"
                 )
                 
-                if model_provider == "DeepSeek":
-                    # DeepSeek模型选择
-                    deepseek_model = st.selectbox(
-                        "选择DeepSeek模型：",
-                        options=["deepseek-chat", "deepseek-reasoner"],
-                        format_func=lambda x: "DeepSeek V3" if x == "deepseek-chat" else "DeepSeek R1"
-                    )
+                # DeepSeek模型选择（两种模式都需要）
+                deepseek_model = st.selectbox(
+                    "选择DeepSeek模型：",
+                    options=["deepseek-chat", "deepseek-reasoner"],
+                    format_func=lambda x: "DeepSeek V3" if x == "deepseek-chat" else "DeepSeek R1"
+                )
+                
+                # API Key输入（两种模式都需要）
+                deepseek_api_key = st.text_input(
+                    "DeepSeek API Key：",
+                    type="password",
+                    help="请输入您的DeepSeek API密钥"
+                )
+                
+                if deepseek_api_key:
+                    st.success("✅ DeepSeek API配置完成")
+                else:
+                    st.warning("⚠️ 请输入DeepSeek API Key")
                     
-                    # API Key输入
-                    deepseek_api_key = st.text_input(
-                        "DeepSeek API Key：",
-                        type="password",
-                        help="请输入您的DeepSeek API密钥"
-                    )
-                    
-                    if deepseek_api_key:
-                        st.success("✅ DeepSeek API配置完成")
-                    else:
-                        st.warning("⚠️ 请输入DeepSeek API Key")
+                # 显示选择的模式信息
+                if model_provider == "LangChain":
+                    st.info("🔗 使用LangChain框架调用DeepSeek API")
+                else:
+                    st.info("🚀 直接调用DeepSeek API")
 
             else:
                 model_provider = None
@@ -1019,13 +1026,13 @@ def main():
                     'content': user_input
                 })
                 
-                # 处理用户输入 - 默认使用LangChain模式
+                # 处理用户输入 - 使用侧边栏配置的参数
                 response = process_chat_input(
                     user_input, 
                     data, 
-                    model_provider="LangChain",  # 默认使用LangChain模式
-                    deepseek_model="deepseek-chat",
-                    deepseek_api_key=None  # 使用内置API Key
+                    model_provider=model_provider,
+                    deepseek_model=deepseek_model,
+                    deepseek_api_key=deepseek_api_key
                 )
                 
                 # 添加助手回复到历史
