@@ -7,7 +7,6 @@ import re
 import requests
 import json
 from typing import Dict, Any, Optional
-
 # 设置页面配置
 st.set_page_config(layout="wide", page_title="Data Analysis", page_icon="📊")
 
@@ -274,7 +273,8 @@ def main():
             num_rows_to_skip_after = st.number_input("尾部删除行数", min_value=0, value=0, help="删除数据末尾的无效行")
     
     # 使用Plotly的默认颜色序列
-    # colors = px.colors.qualitative.Plotly  # 可以选择其他颜色序列如：Set1, Set2, Pastel1, Dark2等
+    # colors = px.colors.qualitative.Plotly  
+    # 或者可以选择其他颜色序列：Set1, Set2, Pastel1, Dark2等
     colors = px.colors.qualitative.Set1
     
     st.markdown("---")
@@ -807,6 +807,91 @@ def main():
                         elif '第三轴' in trace.name:
                             trace.hoverlabel = dict(bgcolor='lightgreen', font=dict(size=14, color='black', family='Arial'))
                     
+                    # Y轴缩放控制界面
+                    st.subheader("📊 Y轴缩放控制")
+                    
+                    # 创建缩放控制的列布局
+                    zoom_col1, zoom_col2, zoom_col3 = st.columns(3)
+                    
+                    # 主轴缩放控制
+                    with zoom_col1:
+                        st.markdown("**🔵 主轴缩放控制**")
+                        primary_auto_scale = st.checkbox("主轴自动缩放", value=True, key="primary_auto")
+                        if not primary_auto_scale:
+                            primary_data = [data[col] for col in primary_axis_columns]
+                            if primary_data:
+                                all_primary_values = pd.concat(primary_data)
+                                primary_min = float(all_primary_values.min())
+                                primary_max = float(all_primary_values.max())
+                                primary_range = st.slider(
+                                    "主轴范围",
+                                    min_value=primary_min,
+                                    max_value=primary_max,
+                                    value=(primary_min, primary_max),
+                                    key="primary_range"
+                                )
+                            else:
+                                primary_range = None
+                        else:
+                            primary_range = None
+                    
+                    # 副轴缩放控制
+                    with zoom_col2:
+                        if secondary_axis:
+                            st.markdown("**🔴 副轴缩放控制**")
+                            secondary_auto_scale = st.checkbox("副轴自动缩放", value=True, key="secondary_auto")
+                            if not secondary_auto_scale:
+                                secondary_min = float(data[secondary_axis].min())
+                                secondary_max = float(data[secondary_axis].max())
+                                secondary_range = st.slider(
+                                    "副轴范围",
+                                    min_value=secondary_min,
+                                    max_value=secondary_max,
+                                    value=(secondary_min, secondary_max),
+                                    key="secondary_range"
+                                )
+                            else:
+                                secondary_range = None
+                        else:
+                            secondary_range = None
+                    
+                    # 第三轴缩放控制
+                    with zoom_col3:
+                        if third_axis:
+                            st.markdown("**🟢 第三轴缩放控制**")
+                            third_auto_scale = st.checkbox("第三轴自动缩放", value=True, key="third_auto")
+                            if not third_auto_scale:
+                                third_min = float(data[third_axis].min())
+                                third_max = float(data[third_axis].max())
+                                third_range = st.slider(
+                                    "第三轴范围",
+                                    min_value=third_min,
+                                    max_value=third_max,
+                                    value=(third_min, third_max),
+                                    key="third_range"
+                                )
+                            else:
+                                third_range = None
+                        else:
+                            third_range = None
+                    
+                    # 快速缩放按钮
+                    st.markdown("**⚡ 快速缩放操作**")
+                    zoom_btn_col1, zoom_btn_col2, zoom_btn_col3, zoom_btn_col4 = st.columns(4)
+                    
+                    with zoom_btn_col1:
+                        if st.button("🔍 放大 (Y轴范围缩小到90%)", key="zoom_in"):
+                            st.session_state.zoom_factor = 0.9
+                    with zoom_btn_col2:
+                        if st.button("🔍 缩小 (Y轴范围扩大到110%)", key="zoom_out"):
+                            st.session_state.zoom_factor = 1.1
+                    with zoom_btn_col3:
+                        if st.button("🎯 重置缩放", key="reset_zoom"):
+                            st.session_state.zoom_factor = 1.0
+                    with zoom_btn_col4:
+                        if st.button("📏 自适应", key="auto_fit"):
+                            st.session_state.zoom_factor = "auto"
+                    
                     # 更新布局
                     layout_update = {
                         'showlegend': True, 
@@ -835,7 +920,9 @@ def main():
                              griddash='dot', 
                              showline=True, 
                              linewidth=1, 
-                             linecolor='blue'
+                             linecolor='blue',
+                             fixedrange=False,  # 启用Y轴缩放
+                             range=primary_range if primary_range else None
                          )
                     }
                     
@@ -849,7 +936,9 @@ def main():
                              linewidth=1, 
                              linecolor='red',
                              overlaying='y', 
-                             side='right'
+                             side='right',
+                             fixedrange=False,  # 启用副轴缩放
+                             range=secondary_range if secondary_range else None
                          )
                     
                     # 添加第三轴配置
@@ -868,13 +957,102 @@ def main():
                                 overlaying='y',
                                 side='right',
                                 anchor='free',
-                                position=0.95  # 在压缩后的区域内，使视觉上第三轴在图表外侧
+                                position=0.95,  # 在压缩后的区域内，使视觉上第三轴在图表外侧
+                                fixedrange=False,  # 启用第三轴缩放
+                                range=third_range if third_range else None
                             ),
                             'margin': dict(r=100)
                         })
                     
+                    # 应用快速缩放功能
+                    if 'zoom_factor' in st.session_state and st.session_state.zoom_factor != 1.0:
+                        zoom_factor = st.session_state.zoom_factor
+                        
+                        if zoom_factor != "auto":
+                            # 对所有Y轴应用缩放
+                            for axis_key in ['yaxis', 'yaxis2', 'yaxis3']:
+                                if axis_key in layout_update:
+                                    current_range = layout_update[axis_key].get('range')
+                                    if current_range is None:
+                                        # 如果没有设置范围，根据数据计算
+                                        if axis_key == 'yaxis' and primary_axis_columns:
+                                            all_primary_values = pd.concat([data[col] for col in primary_axis_columns])
+                                            data_min, data_max = all_primary_values.min(), all_primary_values.max()
+                                        elif axis_key == 'yaxis2' and secondary_axis:
+                                            data_min, data_max = data[secondary_axis].min(), data[secondary_axis].max()
+                                        elif axis_key == 'yaxis3' and third_axis:
+                                            data_min, data_max = data[third_axis].min(), data[third_axis].max()
+                                        else:
+                                            continue
+                                        
+                                        # 计算缩放后的范围
+                                        center = (data_min + data_max) / 2
+                                        half_range = (data_max - data_min) / 2 * zoom_factor
+                                        new_range = [center - half_range, center + half_range]
+                                    else:
+                                        # 基于当前范围进行缩放
+                                        center = (current_range[0] + current_range[1]) / 2
+                                        half_range = (current_range[1] - current_range[0]) / 2 * zoom_factor
+                                        new_range = [center - half_range, center + half_range]
+                                    
+                                    layout_update[axis_key]['range'] = new_range
+                        
+                        # 重置缩放因子
+                        st.session_state.zoom_factor = 1.0
+                    
+                    # 添加图表配置选项
+                    config = {
+                        'displayModeBar': True,
+                        'displaylogo': False,
+                        'modeBarButtonsToAdd': [
+                            'pan2d',
+                            'select2d',
+                            'lasso2d',
+                            'resetScale2d',
+                            'autoScale2d'
+                        ],
+                        'modeBarButtonsToRemove': ['toImage'],
+                        'scrollZoom': True,  # 启用滚轮缩放
+                        'doubleClick': 'reset+autosize'  # 双击重置并自适应
+                    }
+                    
                     fig.update_layout(**layout_update)
-                    st.plotly_chart(fig)
+                    st.plotly_chart(fig, config=config, use_container_width=True)
+                    
+                    # 添加使用说明
+                    with st.expander("📖 多Y轴缩放功能使用说明"):
+                        st.markdown("""
+                        ### 🎯 缩放控制功能
+                        
+                        **1. 独立轴控制：**
+                        - 🔵 **主轴**：控制左侧Y轴的缩放范围
+                        - 🔴 **副轴**：控制右侧第一个Y轴的缩放范围  
+                        - 🟢 **第三轴**：控制右侧第二个Y轴的缩放范围
+                        
+                        **2. 自动/手动模式：**
+                        - ✅ **自动缩放**：系统根据数据自动调整Y轴范围
+                        - 🎚️ **手动缩放**：使用滑块精确设置Y轴的最小值和最大值
+                        
+                        **3. 快速操作：**
+                        - 🔍 **放大/缩小**：快速调整所有Y轴的显示范围
+                        - 🎯 **重置缩放**：恢复到原始显示范围
+                        - 📏 **自适应**：根据当前数据自动调整最佳显示范围
+                        
+                        **4. 交互式缩放：**
+                        - 🖱️ **鼠标滚轮**：在图表上滚动进行缩放
+                        - 🖱️ **框选缩放**：拖拽选择区域进行局部放大
+                        - 🖱️ **双击重置**：双击图表恢复原始视图
+                        - 🖱️ **平移**：按住并拖拽移动视图
+                        
+                        **5. 工具栏功能：**
+                        - 📐 **平移工具**：切换到平移模式
+                        - 🔲 **选择工具**：框选数据点
+                        - 🎯 **重置比例**：恢复原始缩放
+                        - 📏 **自动缩放**：自适应数据范围
+                        """)
+                    
+                    # 显示当前缩放状态
+                    st.info(f"💡 **提示**：当前图表支持 {len([x for x in [True, secondary_axis is not None, third_axis is not None] if x])} 个独立Y轴的缩放控制")
                     
             else:
                 # 两种类型的数据都有，创建共享X轴的子图
