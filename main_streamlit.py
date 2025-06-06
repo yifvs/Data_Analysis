@@ -269,7 +269,8 @@ def main():
         with col2_2:
             num_rows_to_skip_after = st.number_input("尾部删除行数", min_value=0, value=0, help="删除数据末尾的无效行")
     
-    colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
+    # colors = ['tomato', 'red', 'violet', 'cyan', 'orange', 'pink', 'brown', 'skyblue', 'white', 'olive', 'blue', 'forestgreen', 'cornflowerblue']
+    colors = px.colors.qualitative.Set1  # 使用默认的配色顺序（Set1 - 明亮鲜艳，Set2 - 柔和，Bold - 大胆鲜明）
     
     st.markdown("---")
     st.markdown("### 📁 文件上传")
