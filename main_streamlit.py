@@ -7,6 +7,7 @@ import re
 import requests
 import json
 from typing import Dict, Any, Optional
+
 # 设置页面配置
 st.set_page_config(layout="wide", page_title="Data Analysis", page_icon="📊")
 
@@ -272,9 +273,8 @@ def main():
         with col2_2:
             num_rows_to_skip_after = st.number_input("尾部删除行数", min_value=0, value=0, help="删除数据末尾的无效行")
     
-    # 使用Plotly的默认颜色序列，提供更专业的颜色搭配
-    # Use Plotly's default color sequence for more professional color schemes
-    # colors = px.colors.qualitative.Plotly  # 或者可以选择其他颜色序列如：Set1, Set2, Pastel1, Dark2等
+    # 使用Plotly的默认颜色序列
+    # colors = px.colors.qualitative.Plotly  # 可以选择其他颜色序列如：Set1, Set2, Pastel1, Dark2等
     colors = px.colors.qualitative.Set1
     
     st.markdown("---")
@@ -302,27 +302,94 @@ def main():
                 pandas.DataFrame: 处理后的数据框
             """
             try:
-                # 首先尝试不指定索引列读取文件，获取列信息
-                if file_ext == "csv":
-                    temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding='gb18030')
-                else:  # xlsx
-                    temp_data = pd.read_excel(file, header=int(header_row), dtype='str')
+                # 首先尝试读取文件的前几行来检查文件结构
+                file.seek(0)  # 重置文件指针
                 
-                # 检查是否存在常见的时间列名
-                time_columns = ['Time', 'TIME', 'time', 'Timestamp', 'TIMESTAMP', 'timestamp', 
-                               'DateTime', 'DATETIME', 'datetime', '时间', '时刻']
+                if file_ext == "csv":
+                    # 先尝试读取前几行来检查文件结构
+                    try:
+                        # 尝试不同的编码
+                        for encoding in ['gb18030', 'utf-8', 'gbk', 'utf-8-sig']:
+                            try:
+                                file.seek(0)
+                                temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding, nrows=5)
+                                if not temp_data.empty and len(temp_data.columns) > 0:
+                                    st.info(f"✅ 使用编码：{encoding}")
+                                    file.seek(0)
+                                    temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding)
+                                    break
+                            except (UnicodeDecodeError, pd.errors.EmptyDataError):
+                                continue
+                        else:
+                            raise ValueError("无法使用任何编码读取CSV文件")
+                    except Exception as e:
+                        st.error(f"CSV文件读取失败：{str(e)}")
+                        return None
+                else:  # xlsx
+                    try:
+                        file.seek(0)
+                        temp_data = pd.read_excel(file, header=int(header_row), dtype='str', nrows=5)
+                        if temp_data.empty or len(temp_data.columns) == 0:
+                            raise ValueError("Excel文件为空或无有效列")
+                        file.seek(0)
+                        temp_data = pd.read_excel(file, header=int(header_row), dtype='str')
+                    except Exception as e:
+                        st.error(f"Excel文件读取失败：{str(e)}")
+                        return None
+                
+                # 检查数据是否为空
+                if temp_data.empty:
+                    st.error("❌ 文件为空或没有有效数据")
+                    return None
+                
+                if len(temp_data.columns) == 0:
+                    st.error("❌ 文件中没有检测到列，请检查表头行设置")
+                    return None
+                
+                st.success(f"📊 成功读取文件，共 {len(temp_data)} 行，{len(temp_data.columns)} 列")
+                
+                # 保存检测到的编码（仅对CSV文件）
+                detected_encoding = 'gb18030'  # 默认编码
+                if file_ext == "csv":
+                    # 从前面的编码检测中获取正确的编码
+                    for encoding in ['gb18030', 'utf-8', 'gbk', 'utf-8-sig']:
+                        try:
+                            file.seek(0)
+                            test_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding, nrows=1)
+                            if not test_data.empty:
+                                detected_encoding = encoding
+                                break
+                        except:
+                            continue
+                
+                # 检查是否存在常见的时间列名（按优先级排序，优先选择更具体的列名）
+                time_columns = ['Time', 'TIME', 'time', 'DateTime', 'DATETIME', 'datetime', 'Timestamp', 'TIMESTAMP', 'timestamp', '时间']
                 
                 found_time_column = None
-                for col in time_columns:
-                    if col in temp_data.columns:
-                        found_time_column = col
-                        break
+                available_time_columns = []
+                
+                # 收集所有可用的时间列
+                for col in temp_data.columns:
+                    if col in time_columns:
+                        available_time_columns.append(col)
+                
+                if available_time_columns:
+                    # 如果有多个时间列，按优先级选择第一个
+                    for preferred_col in time_columns:
+                        if preferred_col in available_time_columns:
+                            found_time_column = preferred_col
+                            break
+                    
+                    # 如果找到多个时间列，显示提示信息
+                    if len(available_time_columns) > 1:
+                        st.info(f"📋 检测到多个时间列：{', '.join(available_time_columns)}，已选择：{found_time_column}")
                 
                 if found_time_column:
                     # 找到时间列，使用它作为索引
                     st.info(f"✅ 自动检测到时间列：{found_time_column}，将其设为索引列")
+                    file.seek(0)  # 重置文件指针
                     if file_ext == "csv":
-                        data = pd.read_csv(file, index_col=found_time_column, header=int(header_row), dtype='str', encoding='gb18030')
+                        data = pd.read_csv(file, index_col=found_time_column, header=int(header_row), dtype='str', encoding=detected_encoding)
                     else:
                         data = pd.read_excel(file, index_col=found_time_column, header=int(header_row), dtype='str')
                     return data
@@ -353,8 +420,9 @@ def main():
                         
                         if st.button("确认使用选定的索引列", key="confirm_index"):
                             st.success(f"✅ 使用 {selected_index_col} 作为索引列")
+                            file.seek(0)  # 重置文件指针
                             if file_ext == "csv":
-                                data = pd.read_csv(file, index_col=selected_index_col, header=int(header_row), dtype='str', encoding='gb18030')
+                                data = pd.read_csv(file, index_col=selected_index_col, header=int(header_row), dtype='str', encoding=detected_encoding)
                             else:
                                 data = pd.read_excel(file, index_col=selected_index_col, header=int(header_row), dtype='str')
                             return data
@@ -365,8 +433,9 @@ def main():
                     elif index_option == "使用第一列作为索引":
                         first_col = temp_data.columns[0]
                         st.success(f"✅ 使用第一列 '{first_col}' 作为索引")
+                        file.seek(0)  # 重置文件指针
                         if file_ext == "csv":
-                            data = pd.read_csv(file, index_col=0, header=int(header_row), dtype='str', encoding='gb18030')
+                            data = pd.read_csv(file, index_col=0, header=int(header_row), dtype='str', encoding=detected_encoding)
                         else:
                             data = pd.read_excel(file, index_col=0, header=int(header_row), dtype='str')
                         return data
@@ -1037,6 +1106,9 @@ def main():
                 
                 # 添加助手回复到历史
                 st.session_state.chat_history.append(response)
+                
+                # 清空输入框
+                st.session_state.chat_input = ""
                 
                 st.rerun()
                         
