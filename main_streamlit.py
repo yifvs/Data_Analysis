@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import re
 import requests
 import json
 from typing import Dict, Any, Optional
@@ -290,9 +289,7 @@ def main():
         
         # 文件读取函数
         def smart_file_reader(file, file_ext, header_row):
-            """
-            智能文件读取函数，提供多种索引列处理方案
-            
+            """           
             Args:
                 file: 上传的文件对象
                 file_ext: 文件扩展名
@@ -302,43 +299,41 @@ def main():
                 pandas.DataFrame: 处理后的数据框
             """
             try:
-                # 首先尝试读取文件的前几行来检查文件结构
-                file.seek(0)  # 重置文件指针
+                # 重置文件指针
+                file.seek(0)
+                
+                # 一次性编码检测和数据读取
+                temp_data = None
+                detected_encoding = 'gb18030'  # 默认编码
                 
                 if file_ext == "csv":
-                    # 先尝试读取前几行来检查文件结构
-                    try:
-                        # 尝试不同的编码
-                        for encoding in ['gb18030', 'utf-8', 'gbk', 'utf-8-sig']:
-                            try:
-                                file.seek(0)
-                                temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding, nrows=5)
-                                if not temp_data.empty and len(temp_data.columns) > 0:
-                                    st.info(f"✅ 使用编码：{encoding}")
-                                    file.seek(0)
-                                    temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding)
-                                    break
-                            except (UnicodeDecodeError, pd.errors.EmptyDataError):
-                                continue
-                        else:
-                            raise ValueError("无法使用任何编码读取CSV文件")
-                    except Exception as e:
-                        st.error(f"CSV文件读取失败：{str(e)}")
+                    # 优化的编码检测：一次成功后直接读取完整数据
+                    for encoding in ['gb18030', 'utf-8', 'gbk', 'utf-8-sig']:
+                        try:
+                            file.seek(0)
+                            # 直接读取完整数据，避免重复读取
+                            temp_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding)
+                            if not temp_data.empty and len(temp_data.columns) > 0:
+                                detected_encoding = encoding
+                                st.info(f"✅ 使用编码：{encoding}")
+                                break
+                        except (UnicodeDecodeError, pd.errors.EmptyDataError):
+                            continue
+                    else:
+                        st.error("CSV文件读取失败：无法使用任何编码读取文件")
                         return None
                 else:  # xlsx
                     try:
                         file.seek(0)
-                        temp_data = pd.read_excel(file, header=int(header_row), dtype='str', nrows=5)
+                        temp_data = pd.read_excel(file, header=int(header_row), dtype='str')
                         if temp_data.empty or len(temp_data.columns) == 0:
                             raise ValueError("Excel文件为空或无有效列")
-                        file.seek(0)
-                        temp_data = pd.read_excel(file, header=int(header_row), dtype='str')
                     except Exception as e:
                         st.error(f"Excel文件读取失败：{str(e)}")
                         return None
                 
                 # 检查数据是否为空
-                if temp_data.empty:
+                if temp_data is None or temp_data.empty:
                     st.error("❌ 文件为空或没有有效数据")
                     return None
                 
@@ -347,20 +342,6 @@ def main():
                     return None
                 
                 st.success(f"📊 成功读取文件，共 {len(temp_data)} 行，{len(temp_data.columns)} 列")
-                
-                # 保存检测到的编码（仅对CSV文件）
-                detected_encoding = 'gb18030'  # 默认编码
-                if file_ext == "csv":
-                    # 从前面的编码检测中获取正确的编码
-                    for encoding in ['gb18030', 'utf-8', 'gbk', 'utf-8-sig']:
-                        try:
-                            file.seek(0)
-                            test_data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding, nrows=1)
-                            if not test_data.empty:
-                                detected_encoding = encoding
-                                break
-                        except:
-                            continue
                 
                 # 检查是否存在常见的时间列名（按优先级排序，优先选择更具体的列名）
                 time_columns = ['Time', 'TIME', 'time', 'DateTime', 'DATETIME', 'datetime', 'Timestamp', 'TIMESTAMP', 'timestamp', '时间']
@@ -385,14 +366,15 @@ def main():
                         st.info(f"📋 检测到多个时间列：{', '.join(available_time_columns)}，已选择：{found_time_column}")
                 
                 if found_time_column:
-                    # 找到时间列，使用它作为索引
+                    # 找到时间列，基于已读取的数据设置索引，避免重复读取文件
                     st.info(f"✅ 自动检测到时间列：{found_time_column}，将其设为索引列")
-                    file.seek(0)  # 重置文件指针
-                    if file_ext == "csv":
-                        data = pd.read_csv(file, index_col=found_time_column, header=int(header_row), dtype='str', encoding=detected_encoding)
-                    else:
-                        data = pd.read_excel(file, index_col=found_time_column, header=int(header_row), dtype='str')
-                    return data
+                    try:
+                        # 直接在已有数据上设置索引，避免重新读取文件
+                        data = temp_data.set_index(found_time_column)
+                        return data
+                    except Exception as e:
+                        st.warning(f"设置时间列索引失败：{str(e)}，使用默认索引")
+                        return temp_data
                 else:
                     # 未找到时间列，提供用户选择
                     st.warning("⚠️ 未检测到标准时间列名，请选择索引处理方式：")
@@ -420,12 +402,13 @@ def main():
                         
                         if st.button("确认使用选定的索引列", key="confirm_index"):
                             st.success(f"✅ 使用 {selected_index_col} 作为索引列")
-                            file.seek(0)  # 重置文件指针
-                            if file_ext == "csv":
-                                data = pd.read_csv(file, index_col=selected_index_col, header=int(header_row), dtype='str', encoding=detected_encoding)
-                            else:
-                                data = pd.read_excel(file, index_col=selected_index_col, header=int(header_row), dtype='str')
-                            return data
+                            try:
+                                # 基于已读取的数据设置索引，避免重复读取文件
+                                data = temp_data.set_index(selected_index_col)
+                                return data
+                            except Exception as e:
+                                st.error(f"设置索引列失败：{str(e)}")
+                                return temp_data
                         else:
                             st.info("👆 请点击确认按钮以应用索引列设置")
                             return None
@@ -433,12 +416,13 @@ def main():
                     elif index_option == "使用第一列作为索引":
                         first_col = temp_data.columns[0]
                         st.success(f"✅ 使用第一列 '{first_col}' 作为索引")
-                        file.seek(0)  # 重置文件指针
-                        if file_ext == "csv":
-                            data = pd.read_csv(file, index_col=0, header=int(header_row), dtype='str', encoding=detected_encoding)
-                        else:
-                            data = pd.read_excel(file, index_col=0, header=int(header_row), dtype='str')
-                        return data
+                        try:
+                            # 基于已读取的数据设置第一列为索引，避免重复读取文件
+                            data = temp_data.set_index(first_col)
+                            return data
+                        except Exception as e:
+                            st.error(f"设置第一列为索引失败：{str(e)}")
+                            return temp_data
                     
                     return None
                     
