@@ -91,15 +91,13 @@ class UIComponents:
         st.subheader("🔍 数据预览与清洗")
         
         # 数据基本信息
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("总行数", len(data))
         with col2:
             st.metric("总列数", len(data.columns))
         with col3:
             st.metric("缺失值", data.isnull().sum().sum())
-        with col4:
-            st.metric("数据类型", len(data.dtypes.unique()))
         
         # 数据预览
         with st.expander("📊 数据预览", expanded=True):
@@ -114,8 +112,8 @@ class UIComponents:
                 remove_duplicates = st.checkbox("移除重复行", value=False)
                 fill_na_method = st.selectbox(
                     "缺失值处理",
-                    ["不处理", "删除含缺失值的行", "前向填充", "后向填充", "均值填充"],
-                    help="均值填充：数值列用均值填充，字符串列用向后填充（无法填充时用'未知'）。系统会自动将空格字符转换为真正的缺失值进行处理。"
+                    ["不处理", "删除含缺失值的行", "前向填充", "后向填充", "均值填充", "线性插值填充", "向前向后填充"],
+                    help="均值填充：数值列用均值填充，字符串列用向后填充（无法填充时用'未知'）；线性插值填充：数值列用线性插值，字符串列用前向填充；向前向后填充：先前向填充再后向填充。系统会自动将空格字符转换为真正的缺失值进行处理。"
                 )
             
             with col2:
@@ -146,7 +144,7 @@ class UIComponents:
         return cleaned_data
     
     @staticmethod
-    def create_column_selection_section(data: pd.DataFrame) -> Tuple[List[str], str]:
+    def create_column_selection_section(data: pd.DataFrame) -> Tuple[List[str], str, Optional[int]]:
         """
         创建列选择区域
         
@@ -154,7 +152,7 @@ class UIComponents:
             data: 数据框
             
         Returns:
-            tuple: (选中的列列表, 图表类型)
+            tuple: (选中的列列表, 图表类型, 动画帧数)
         """
         st.subheader("📈 图表配置")
         
@@ -166,7 +164,7 @@ class UIComponents:
             
             if not numeric_columns:
                 st.error("❌ 没有找到数值类型的列，无法生成图表")
-                return [], 'line'
+                return [], 'line', None
             
             selected_columns = st.multiselect(
                 "选择要可视化的列",
@@ -178,11 +176,24 @@ class UIComponents:
         with col2:
             chart_type = st.selectbox(
                 "图表类型",
-                ['line', 'bar', 'scatter'],
-                format_func=lambda x: {'line': '📈 折线图', 'bar': '📊 柱状图', 'scatter': '🔵 散点图'}[x]
+                ['line', 'bar', 'scatter', 'animated'],
+                format_func=lambda x: {'line': '📈 折线图', 'bar': '📊 柱状图', 'scatter': '🔵 散点图', 'animated': '🎬 动态图表'}[x]
             )
+            
+            # 动态图表的帧数选择
+            animation_frames = None
+            if chart_type == 'animated':
+                animation_frames = st.selectbox(
+                    "动画帧数设置",
+                    [50, 100, 200, 500, 1000, "全部数据"],
+                    index=1,  # 默认选择100
+                    help="💡 提示：选择'全部数据'将播放每一个数据点，适合小数据集。大数据集建议选择较少帧数以保证播放流畅。"
+                )
+                # 如果选择"全部数据"，则设置为None，让程序自动使用所有数据点
+                if animation_frames == "全部数据":
+                    animation_frames = None
         
-        return selected_columns, chart_type
+        return selected_columns, chart_type, animation_frames
     
     @staticmethod
     def create_chart_layout_section() -> str:
@@ -455,6 +466,27 @@ class UIComponents:
             if not string_cols.empty:
                 cleaned_data[string_cols] = cleaned_data[string_cols].bfill()
                 # 如果向后填充后仍有缺失值，用'未知'填充
+                cleaned_data[string_cols] = cleaned_data[string_cols].fillna('未知')
+        elif fill_na_method == "线性插值填充":
+            # 数值列用线性插值填充
+            numeric_cols = cleaned_data.select_dtypes(include=['number']).columns
+            for col in numeric_cols:
+                cleaned_data[col] = cleaned_data[col].interpolate(method='linear')
+            # 字符串列用前向填充
+            string_cols = cleaned_data.select_dtypes(include=['object', 'string']).columns
+            if not string_cols.empty:
+                cleaned_data[string_cols] = cleaned_data[string_cols].ffill()
+                # 如果前向填充后仍有缺失值，用'未知'填充
+                cleaned_data[string_cols] = cleaned_data[string_cols].fillna('未知')
+        elif fill_na_method == "向前向后填充":
+            # 先前向填充，再后向填充
+            cleaned_data = cleaned_data.ffill().bfill()
+            # 如果仍有缺失值，数值列用0填充，字符串列用'未知'填充
+            numeric_cols = cleaned_data.select_dtypes(include=['number']).columns
+            string_cols = cleaned_data.select_dtypes(include=['object', 'string']).columns
+            if not numeric_cols.empty:
+                cleaned_data[numeric_cols] = cleaned_data[numeric_cols].fillna(0)
+            if not string_cols.empty:
                 cleaned_data[string_cols] = cleaned_data[string_cols].fillna('未知')
         
         # 转换为哈希值列
