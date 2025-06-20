@@ -1,4 +1,4 @@
-# Excel数据可视化分析工具 - 模块化版本
+# Excel数据可视化分析工具
 
 ## 📋 项目概述
 
@@ -8,8 +8,8 @@
 
 ```
 |
-├── main_streamlit.py  # 模块化主文件
-├── config.py                  # 配置文件
+├── main_streamlit.py         # 模块化主文件
+├── config.py                 # 配置文件
 ├── file_handler.py           # 文件处理模块
 ├── ai_chat.py                # AI聊天模块
 ├── chart_generator.py        # 图表生成模块
