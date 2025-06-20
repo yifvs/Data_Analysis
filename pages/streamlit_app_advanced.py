@@ -18,7 +18,19 @@ import base64
 from io import BytesIO
 
 # 导入现有的PDF差异分析模块
-from pdf_diff import PDFDiffAnalyzer
+try:
+    from pdf_diff import PDFDiffAnalyzer, PDFTextExtractor
+except ImportError:
+    # 如果在云端部署时找不到模块，尝试从当前目录导入
+    import sys
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, current_dir)
+    try:
+        from pdf_diff import PDFDiffAnalyzer, PDFTextExtractor
+    except ImportError:
+        st.error("❌ 无法导入PDF差异分析模块，请确保pdf_diff.py文件在正确位置")
+        st.stop()
 
 # 尝试导入PDF预览相关库
 try:
@@ -257,7 +269,6 @@ def display_text_preview(uploaded_file):
             tmp.write(uploaded_file.getvalue())
             tmp_path = tmp.name
         
-        from pdf_diff import PDFTextExtractor
         extractor = PDFTextExtractor()
         text_content = extractor.extract_text(tmp_path)
         
