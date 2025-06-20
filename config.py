@@ -7,7 +7,7 @@ import plotly.express as px
 
 # 应用程序基本配置
 APP_CONFIG = {
-    'page_title': 'Data Analysis v2.1.0',
+    'page_title': 'Data Analysis v2.2.0',
     'page_icon': '📊',
     'layout': 'wide'
 }

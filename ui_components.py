@@ -105,7 +105,7 @@ class UIComponents:
             st.dataframe(data.head(preview_rows), use_container_width=True)
         
         # 数据清洗选项
-        with st.expander("🧹 数据清洗选项"):
+        with st.expander("🧹 数据清洗选项", expanded=True):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -221,6 +221,151 @@ class UIComponents:
         )
         
         return layout_type
+    
+    @staticmethod
+    def create_custom_axis_section(data: pd.DataFrame) -> Dict[str, any]:
+        """
+        创建自定义X轴和Y轴配置区域
+        
+        Args:
+            data: 数据框
+            
+        Returns:
+            dict: 自定义轴配置结果
+        """
+        st.subheader("🎯 自定义轴配置")
+        
+        # 获取所有列（包括数值和非数值列）
+        all_columns = data.columns.tolist()
+        numeric_columns = data.select_dtypes(include=['number']).columns.tolist()
+        
+        # 创建两列布局
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📊 X轴配置**")
+            
+            # X轴数据列选择
+            x_column = st.selectbox(
+                "选择X轴数据列",
+                [None] + all_columns,  # 添加None选项作为默认
+                index=0,  # 默认选择None
+                format_func=lambda x: "请选择..." if x is None else str(x),
+                help="选择作为X轴的数据列（可以是数值或文本列）"
+            )
+            
+            # X轴标题
+            x_title = st.text_input(
+                "X轴标题",
+                value=x_column if x_column else "",
+                help="自定义X轴显示标题"
+            )
+            
+            # X轴范围设置（仅对数值列）
+            x_range_auto = True
+            x_range = None
+            if x_column and x_column in numeric_columns:
+                x_range_auto = st.checkbox("自动X轴范围", value=True)
+                if not x_range_auto:
+                    x_min = data[x_column].min()
+                    x_max = data[x_column].max()
+                    x_range = st.slider(
+                        "X轴范围",
+                        min_value=float(x_min),
+                        max_value=float(x_max),
+                        value=(float(x_min), float(x_max)),
+                        help="设置X轴显示范围"
+                    )
+        
+        with col2:
+            st.markdown("**📈 Y轴配置**")
+            
+            # Y轴数据列选择（多选）
+            y_columns = st.multiselect(
+                "选择Y轴数据列",
+                numeric_columns,
+                default=[],  # 默认为空
+                help="选择作为Y轴的数值列（可多选）"
+            )
+            
+            # Y轴标题
+            y_title = st.text_input(
+                "Y轴标题",
+                value="数值" if y_columns else "",
+                help="自定义Y轴显示标题"
+            )
+            
+            # Y轴范围设置
+            y_range_auto = True
+            y_range = None
+            if y_columns:
+                y_range_auto = st.checkbox("自动Y轴范围", value=True)
+                if not y_range_auto:
+                    y_data = data[y_columns].select_dtypes(include=['number'])
+                    if not y_data.empty:
+                        y_min = y_data.min().min()
+                        y_max = y_data.max().max()
+                        y_range = st.slider(
+                            "Y轴范围",
+                            min_value=float(y_min),
+                            max_value=float(y_max),
+                            value=(float(y_min), float(y_max)),
+                            help="设置Y轴显示范围"
+                        )
+        
+        # 图表样式配置
+        st.markdown("**🎨 图表样式**")
+        style_col1, style_col2, style_col3 = st.columns(3)
+        
+        with style_col1:
+            chart_type = st.selectbox(
+                "图表类型",
+                ['line', 'bar', 'scatter', 'area'],
+                format_func=lambda x: {
+                    'line': '📈 折线图',
+                    'bar': '📊 柱状图', 
+                    'scatter': '🔵 散点图',
+                    'area': '📊 面积图'
+                }[x],
+                help="选择图表显示类型"
+            )
+        
+        with style_col2:
+            # 颜色主题选项映射
+            color_theme_options = {
+                '默认主题': 'plotly',
+                '翠绿渐变': 'viridis', 
+                '紫红渐变': 'plasma',
+                '火焰渐变': 'inferno',
+                '岩浆渐变': 'magma',
+                '蓝绿渐变': 'cividis'
+            }
+            
+            color_theme_display = st.selectbox(
+                "颜色主题",
+                list(color_theme_options.keys()),
+                help="选择图表颜色主题"
+            )
+            
+            # 获取对应的英文值
+            color_theme = color_theme_options[color_theme_display]
+        
+        with style_col3:
+            show_grid = st.checkbox("显示网格线", value=True)
+        
+        return {
+            'x_column': x_column,
+            'x_title': x_title,
+            'x_range_auto': x_range_auto,
+            'x_range': x_range,
+            'y_columns': y_columns,
+            'y_title': y_title,
+            'y_range_auto': y_range_auto,
+            'y_range': y_range,
+            'chart_type': chart_type,
+            'color_theme': color_theme,
+            'show_grid': show_grid
+        }
     
     @staticmethod
     def create_axis_assignment_section(selected_columns: List[str], layout_type: str) -> Dict[str, List[str]]:

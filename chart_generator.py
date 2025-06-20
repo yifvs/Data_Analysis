@@ -21,6 +21,174 @@ class ChartGenerator:
         self.colors = COLOR_SCHEMES.get(color_scheme, COLOR_SCHEMES['default'])
         self.chart_config = CHART_CONFIG
     
+    def create_custom_axis_chart(self, data: pd.DataFrame, custom_config: Dict[str, Any]) -> go.Figure:
+        """
+        根据自定义轴配置创建图表
+        
+        Args:
+            data: 数据框
+            custom_config: 自定义轴配置
+            
+        Returns:
+            plotly.graph_objects.Figure: 图表对象
+        """
+        x_column = custom_config.get('x_column')
+        y_columns = custom_config.get('y_columns', [])
+        chart_type = custom_config.get('chart_type', 'line')
+        color_theme = custom_config.get('color_theme', 'plotly')
+        
+        if not x_column or x_column is None or not y_columns:
+            # 创建空图表
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择X轴和Y轴数据列",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        # 创建图表
+        fig = go.Figure()
+        
+        # 获取X轴数据
+        x_data = data[x_column]
+        
+        # 设置颜色序列
+        if color_theme == 'plotly':
+            colors = px.colors.qualitative.Plotly
+        else:
+            colors = getattr(px.colors.sequential, color_theme.title(), px.colors.qualitative.Plotly)
+        
+        # 为每个Y轴列创建trace
+        for i, y_col in enumerate(y_columns):
+            y_data = data[y_col]
+            color = colors[i % len(colors)]
+            
+            # 检查是否为哈希值列
+            is_hash_column = self._is_hash_column(data, y_col)
+            
+            if chart_type == 'line':
+                if is_hash_column:
+                    # 获取原始字符串数据用于悬停显示
+                    original_strings = self._get_original_strings(data, y_col)
+                    fig.add_trace(go.Scatter(
+                        x=x_data,
+                        y=y_data,
+                        mode='lines+markers',
+                        name=y_col,
+                        line=dict(color=color, width=2),
+                        marker=dict(size=4),
+                        customdata=original_strings,
+                        hovertemplate=f'<b>{y_col}</b><br>' +
+                                    f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                    f'原始值: %{{customdata}}<br>' +
+                                    f'哈希值: %{{y}}<extra></extra>'
+                    ))
+                else:
+                    fig.add_trace(go.Scatter(
+                        x=x_data,
+                        y=y_data,
+                        mode='lines+markers',
+                        name=y_col,
+                        line=dict(color=color, width=2),
+                        marker=dict(size=4),
+                        hovertemplate=f'<b>{y_col}</b><br>' +
+                                    f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                    f'{custom_config.get("y_title", "数值")}: %{{y}}<extra></extra>'
+                    ))
+            
+            elif chart_type == 'bar':
+                fig.add_trace(go.Bar(
+                    x=x_data,
+                    y=y_data,
+                    name=y_col,
+                    marker_color=color,
+                    hovertemplate=f'<b>{y_col}</b><br>' +
+                                f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                f'{custom_config.get("y_title", "数值")}: %{{y}}<extra></extra>'
+                ))
+            
+            elif chart_type == 'scatter':
+                if is_hash_column:
+                    original_strings = self._get_original_strings(data, y_col)
+                    fig.add_trace(go.Scatter(
+                        x=x_data,
+                        y=y_data,
+                        mode='markers',
+                        name=y_col,
+                        marker=dict(color=color, size=8),
+                        customdata=original_strings,
+                        hovertemplate=f'<b>{y_col}</b><br>' +
+                                    f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                    f'原始值: %{{customdata}}<br>' +
+                                    f'哈希值: %{{y}}<extra></extra>'
+                    ))
+                else:
+                    fig.add_trace(go.Scatter(
+                        x=x_data,
+                        y=y_data,
+                        mode='markers',
+                        name=y_col,
+                        marker=dict(color=color, size=8),
+                        hovertemplate=f'<b>{y_col}</b><br>' +
+                                    f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                    f'{custom_config.get("y_title", "数值")}: %{{y}}<extra></extra>'
+                    ))
+            
+            elif chart_type == 'area':
+                fig.add_trace(go.Scatter(
+                    x=x_data,
+                    y=y_data,
+                    mode='lines',
+                    name=y_col,
+                    fill='tonexty' if i > 0 else 'tozeroy',
+                    line=dict(color=color, width=2),
+                    hovertemplate=f'<b>{y_col}</b><br>' +
+                                f'{custom_config.get("x_title", x_column)}: %{{x}}<br>' +
+                                f'{custom_config.get("y_title", "数值")}: %{{y}}<extra></extra>'
+                ))
+        
+        # 更新布局
+        fig.update_layout(
+            title=dict(
+                text=f"{custom_config.get('y_title', '数值')} vs {custom_config.get('x_title', x_column)}",
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            xaxis=dict(
+                title=custom_config.get('x_title', x_column),
+                showgrid=custom_config.get('show_grid', True),
+                gridcolor='lightgray',
+                gridwidth=1
+            ),
+            yaxis=dict(
+                title=custom_config.get('y_title', '数值'),
+                showgrid=custom_config.get('show_grid', True),
+                gridcolor='lightgray',
+                gridwidth=1
+            ),
+            hovermode='x unified',
+            template='plotly_white',
+            showlegend=len(y_columns) > 1,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
+        )
+        
+        # 应用轴范围设置
+        if not custom_config.get('x_range_auto', True) and custom_config.get('x_range'):
+            fig.update_xaxes(range=custom_config['x_range'])
+        
+        if not custom_config.get('y_range_auto', True) and custom_config.get('y_range'):
+            fig.update_yaxes(range=custom_config['y_range'])
+        
+        return fig
+    
     def create_single_axis_chart(self, data: pd.DataFrame, selected_columns: List[str], 
                                  chart_type: str = 'line', animation_frames: int = None) -> go.Figure:
         """
