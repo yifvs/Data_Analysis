@@ -12,3 +12,7 @@ streamlit_authenticator
 python-dateutil
 langchain
 langchain-community
+chardet>=5.0.0   # 编码检测
+typing-extensions>=4.0.0
+kaleido>=0.2.1  # Plotly静态图像导出支持
+Pillow>=9.0.0   # 图像处理库
