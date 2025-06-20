@@ -244,7 +244,7 @@ def process_chat_input(user_input, data, model_provider="LangChain", deepseek_mo
 
 def main():
 
-    st.title(":blue[译码数据可视化程序] ✈")
+    st.title(":blue[Data Analysis v2.0.0] ✈")
     st.markdown("---")
     
     # 使用列布局优化界面
