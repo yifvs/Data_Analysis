@@ -22,7 +22,7 @@ class ChartGenerator:
         self.chart_config = CHART_CONFIG
     
     def create_single_axis_chart(self, data: pd.DataFrame, selected_columns: List[str], 
-                                chart_type: str = 'line') -> go.Figure:
+                                 chart_type: str = 'line', animation_frames: int = None) -> go.Figure:
         """
         创建单轴图表
         
@@ -101,6 +101,9 @@ class ChartGenerator:
                         name=col,
                         marker=dict(color=color, size=6)
                     ))
+            elif chart_type == 'animated':
+                # 创建动态图表（时间序列动画）
+                return self._create_animated_chart(data, selected_columns, animation_frames)
         
         self._apply_layout_config(fig, data, selected_columns)
         return fig
@@ -441,6 +444,8 @@ class ChartGenerator:
             
             # 检查是否为哈希值列并获取原始字符串
             y_values = pd.to_numeric(data[col], errors='coerce')
+            # 处理NA值：使用前向填充，如果仍有NA则用0填充
+            y_values = y_values.ffill().fillna(0)
             hover_text = None
             if self._is_hash_column(data, col):
                 original_strings = self._get_original_strings(data, col)
@@ -535,6 +540,8 @@ class ChartGenerator:
             
             # 检查是否为哈希值列并获取原始字符串
             y_values = pd.to_numeric(data[col], errors='coerce')
+            # 处理NA值：使用前向填充，如果仍有NA则用0填充
+            y_values = y_values.ffill().fillna(0)
             hover_text = None
             if self._is_hash_column(data, col):
                 original_strings = self._get_original_strings(data, col)
@@ -587,8 +594,28 @@ class ChartGenerator:
         """
         yaxis_config = dict(**self.chart_config['grid_config'])
         
-        # 为哈希值列设置自定义Y轴刻度
+        # 自动设置Y轴范围以匹配数据范围
         if data is not None and columns:
+            # 计算所有选中列的数值范围
+            numeric_data = []
+            for col in columns:
+                if col in data.columns:
+                    col_data = pd.to_numeric(data[col], errors='coerce').dropna()
+                    if not col_data.empty:
+                        numeric_data.extend(col_data.tolist())
+            
+            if numeric_data:
+                y_min = min(numeric_data)
+                y_max = max(numeric_data)
+                y_range = y_max - y_min
+                # 添加10%的边距以确保数据点不贴边
+                margin = y_range * 0.1 if y_range > 0 else 1
+                yaxis_config.update({
+                    'range': [y_min - margin, y_max + margin],
+                    'autorange': False
+                })
+            
+            # 为哈希值列设置自定义Y轴刻度
             hash_cols = [col for col in columns if self._is_hash_column(data, col)]
             if hash_cols:
                 col = hash_cols[0]  # 使用第一个哈希值列
@@ -598,7 +625,8 @@ class ChartGenerator:
                     yaxis_config.update({
                         'tickmode': 'array',
                         'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
+                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes],
+                        'autorange': False
                     })
         
         fig.update_layout(
@@ -673,6 +701,388 @@ class ChartGenerator:
                 return data[col].astype(str).tolist()
         except:
             return data[col].astype(str).tolist()
+    
+    def _create_animated_chart(self, data: pd.DataFrame, selected_columns: List[str], 
+                              animation_frames: int = None) -> go.Figure:
+        """
+        创建优化的动态时间序列图表
+        
+        Args:
+            data: 数据框
+            selected_columns: 选中的列
+            animation_frames: 动画帧数
+            
+        Returns:
+            plotly.graph_objects.Figure: 动态图表对象
+        """
+        frames = []
+        steps = []
+        
+        # 使用用户选择的帧数，如果为None则使用所有数据点
+        if animation_frames is None:
+            # 使用所有数据点
+            frame_indices = list(range(len(data)))
+        else:
+            # 使用指定的帧数
+            max_frames = animation_frames
+            if len(data) > max_frames:
+                step = len(data) // max_frames
+                frame_indices = list(range(0, len(data), step))
+                if frame_indices[-1] != len(data) - 1:
+                    frame_indices.append(len(data) - 1)
+            else:
+                frame_indices = list(range(len(data)))
+        
+        # 确保frame_indices不为空且至少有一个有效索引
+        if not frame_indices:
+            frame_indices = [0]
+        
+        # 确保最后一帧包含所有数据
+        if frame_indices[-1] != len(data) - 1:
+            frame_indices.append(len(data) - 1)
+        
+        # 为每一帧创建数据
+        for frame_idx, i in enumerate(frame_indices):
+            # 确保第一帧至少包含2个数据点以形成线条
+            if frame_idx == 0 and i == 0 and len(data) > 1:
+                frame_data = data.iloc[:2]  # 第一帧至少显示前两个点
+            else:
+                frame_data = data.iloc[:i+1]  # 包含当前索引的数据
+            frame_traces = []
+            
+            # 为每个列创建trace
+            for j, col in enumerate(selected_columns):
+                color = self.colors[j % len(self.colors)]
+                is_hash_column = self._is_hash_column(data, col)
+                
+                # 获取数值数据并处理NA值
+                y_values = pd.to_numeric(frame_data[col], errors='coerce')
+                # 处理NA值：使用前向填充，如果仍有NA则用0填充
+                y_values = y_values.ffill().fillna(0)
+                
+                # 根据数据点数量决定显示模式 - 用户要求只显示线条
+                display_mode = 'lines' if len(frame_data) >= 2 else 'markers'
+                
+                if is_hash_column:
+                    original_strings = self._get_original_strings(frame_data, col)
+                    frame_traces.append(go.Scatter(
+                        x=frame_data.index,
+                        y=y_values,
+                        mode=display_mode,
+                        name=col,
+                        line=dict(color=color, width=1.5, shape='spline') if len(frame_data) >= 2 else None,
+                        marker=dict(
+                            color=color, 
+                            size=8 if len(frame_data) < 2 else 6,
+                            line=dict(width=1, color='white'),
+                            symbol='circle'
+                        ),
+                        customdata=original_strings,
+                        hovertemplate=f'<b>{col}</b><br>' +
+                                    '索引: %{x}<br>' +
+                                    '原始值: %{customdata}<br>' +
+                                    '数值: %{y:.2f}<extra></extra>',
+                        legendgroup=col,  # 图例分组
+                        showlegend=(frame_idx == 0)  # 只在第一帧显示图例
+                    ))
+                    
+                    # 添加动态悬停标记点（跟随曲线的最新数据点）
+                    if len(frame_data) > 0:
+                        latest_x = frame_data.index[-1]
+                        latest_y = y_values.iloc[-1]
+                        latest_original = original_strings[-1] if original_strings else str(latest_y)
+                        
+                        frame_traces.append(go.Scatter(
+                            x=[latest_x],
+                            y=[latest_y],
+                            mode='markers',
+                            name=f'{col}_highlight',
+                            marker=dict(
+                                color=color,
+                                size=15,
+                                line=dict(width=3, color='white'),
+                                symbol='circle',
+                                opacity=0.8
+                            ),
+                            customdata=[latest_original],
+                            hovertemplate=f'<b>🎯 {col} 当前值</b><br>' +
+                                        '索引: %{x}<br>' +
+                                        '原始值: %{customdata}<br>' +
+                                        '数值: %{y:.2f}<extra></extra>',
+                            showlegend=False,
+                            hoverinfo='all'
+                        ))
+                        
+                        # 添加始终可见的文本标注（显示当前数据点信息）
+                        text_display = f"{col}: {latest_y:.2f}"
+                        if is_hash_column and latest_original != str(latest_y):
+                            text_display = f"{col}: {latest_original} ({latest_y:.2f})"
+                        
+                        frame_traces.append(go.Scatter(
+                            x=[latest_x],
+                            y=[latest_y],
+                            mode='markers+text',
+                            name=f'{col}_text',
+                            marker=dict(
+                                color='rgba(0,0,0,0)',  # 透明标记
+                                size=1
+                            ),
+                            text=[text_display],
+                            textposition='top center',
+                            textfont=dict(
+                                size=12,
+                                color=color,
+                                family='Arial Black'
+                            ),
+                            showlegend=False,
+                            hoverinfo='skip'  # 跳过悬停信息，避免重复
+                        ))
+                else:
+                    frame_traces.append(go.Scatter(
+                        x=frame_data.index,
+                        y=y_values,
+                        mode=display_mode,
+                        name=col,
+                        line=dict(color=color, width=1.5, shape='spline') if len(frame_data) >= 2 else None,
+                        marker=dict(
+                            color=color, 
+                            size=8 if len(frame_data) < 2 else 6,
+                            line=dict(width=1, color='white'),
+                            symbol='circle'
+                        ),
+                        hovertemplate=f'<b>{col}</b><br>' +
+                                    '索引: %{x}<br>' +
+                                    '数值: %{y:.2f}<extra></extra>',
+                        legendgroup=col,  # 图例分组
+                        showlegend=(frame_idx == 0)  # 只在第一帧显示图例
+                    ))
+                    
+                    # 添加动态悬停标记点（跟随曲线的最新数据点）
+                    if len(frame_data) > 0:
+                        latest_x = frame_data.index[-1]
+                        latest_y = y_values.iloc[-1]
+                        
+                        frame_traces.append(go.Scatter(
+                            x=[latest_x],
+                            y=[latest_y],
+                            mode='markers',
+                            name=f'{col}_highlight',
+                            marker=dict(
+                                color=color,
+                                size=15,
+                                line=dict(width=3, color='white'),
+                                symbol='circle',
+                                opacity=0.8
+                            ),
+                            hovertemplate=f'<b>🎯 {col} 当前值</b><br>' +
+                                        '索引: %{x}<br>' +
+                                        '数值: %{y:.2f}<extra></extra>',
+                            showlegend=False,
+                            hoverinfo='all'
+                        ))
+                        
+                        # 添加始终可见的文本标注（显示当前数据点信息）
+                        text_display = f"{col}: {latest_y:.2f}"
+                        
+                        frame_traces.append(go.Scatter(
+                            x=[latest_x],
+                            y=[latest_y],
+                            mode='markers+text',
+                            name=f'{col}_text',
+                            marker=dict(
+                                color='rgba(0,0,0,0)',  # 透明标记
+                                size=1
+                            ),
+                            text=[text_display],
+                            textposition='top center',
+                            textfont=dict(
+                                size=12,
+                                color=color,
+                                family='Arial Black'
+                            ),
+                            showlegend=False,
+                            hoverinfo='skip'  # 跳过悬停信息，避免重复
+                        ))
+            
+            frames.append(go.Frame(
+                data=frame_traces,
+                name=str(frame_idx)
+            ))
+            
+            # 创建更简洁的步骤标签（移除%符号避免重复）
+            progress_percent = int((frame_idx / (len(frame_indices) - 1)) * 100)
+            steps.append(dict(
+                args=[[str(frame_idx)], {"frame": {"duration": 500, "redraw": True},
+                                "mode": "immediate",
+                                "transition": {"duration": 150}}],
+                label=str(progress_percent),
+                method="animate"
+            ))
+        
+        # 创建初始图表 - 确保显示第一帧的数据
+        initial_data = []
+        if frames:
+            # 使用第一帧的数据作为初始显示
+            initial_data = frames[0].data
+        
+        fig = go.Figure(
+            data=initial_data,
+            frames=frames
+        )
+        
+        # 添加优化的播放控制按钮
+        fig.update_layout(
+            updatemenus=[{
+                "buttons": [
+                    {
+                        "args": [None, {"frame": {"duration": 600, "redraw": True},
+                                        "fromcurrent": True, "transition": {"duration": 300,
+                                        "easing": "quadratic-in-out"}}],
+                        "label": "🎬 播放",
+                        "method": "animate"
+                    },
+                    {
+                        "args": [[None], {"frame": {"duration": 0, "redraw": True},
+                                          "mode": "immediate",
+                                          "transition": {"duration": 0}}],
+                        "label": "⏸️ 暂停",
+                        "method": "animate"
+                    },
+                    {
+                        "args": [[frames[0].name], {"frame": {"duration": 0, "redraw": True},
+                                                   "mode": "immediate",
+                                                   "transition": {"duration": 0}}],
+                        "label": "⏮️ 重置",
+                        "method": "animate"
+                    }
+                ],
+                "direction": "left",
+                "pad": {"r": 10, "t": 10},
+                "showactive": False,
+                "type": "buttons",
+                "x": 0.02,
+                "xanchor": "left",
+                "y": 1.02,
+                "yanchor": "bottom",
+                "bgcolor": "rgba(255,255,255,0.8)",
+                "bordercolor": "rgba(0,0,0,0.2)",
+                "borderwidth": 1
+            }],
+            sliders=[{
+                "active": 0,
+                "yanchor": "top",
+                "xanchor": "left",
+                "currentvalue": {
+                    "font": {"size": 14, "color": "#2E86AB"},
+                    "prefix": "进度: ",
+                    "suffix": "%",
+                    "visible": True,
+                    "xanchor": "right"
+                },
+                "transition": {"duration": 200, "easing": "cubic-in-out"},
+                "pad": {"b": 20, "t": 20},
+                "len": 0.85,
+                "x": 0.1,
+                "y": 0,
+                "steps": steps,
+                "bgcolor": "rgba(46, 134, 171, 0.1)",
+                "bordercolor": "rgba(46, 134, 171, 0.3)",
+                "borderwidth": 1,
+                "tickcolor": "rgba(46, 134, 171, 0.6)"
+            }]
+        )
+        
+        # 为动态图表设置特殊的布局配置（不使用通用的_apply_layout_config）
+        # 计算Y轴范围
+        yaxis_config = dict(**self.chart_config['grid_config'])
+        
+        # 自动设置Y轴范围以匹配数据范围
+        if data is not None and selected_columns:
+            # 计算所有选中列的数值范围
+            numeric_data = []
+            for col in selected_columns:
+                if col in data.columns:
+                    col_data = pd.to_numeric(data[col], errors='coerce').dropna()
+                    if not col_data.empty:
+                        numeric_data.extend(col_data.tolist())
+            
+            if numeric_data:
+                y_min = min(numeric_data)
+                y_max = max(numeric_data)
+                y_range = y_max - y_min
+                # 添加10%的边距以确保数据点不贴边
+                margin = y_range * 0.1 if y_range > 0 else 1
+                yaxis_config.update({
+                    'range': [y_min - margin, y_max + margin],
+                    'autorange': False
+                })
+        
+        # 更新布局以适应动画和优化视觉效果
+        fig.update_layout(
+            title={
+                'text': "🎬 动态时间序列图表",
+                'x': 0.5,
+                'xanchor': 'center',
+                'font': {'size': 20, 'color': '#2E86AB'}
+            },
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1
+            ),
+            width=self.chart_config['default_width'],
+            height=self.chart_config['default_height'] + 120,
+            margin=dict(t=80, b=80, l=60, r=60),
+            plot_bgcolor='rgba(248,249,250,0.8)',
+            paper_bgcolor='white',
+            font=dict(family="Arial, sans-serif", size=12, color="#333333"),
+            hovermode='x',
+            hoverlabel=dict(
+                bgcolor="rgba(255,255,255,0.9)",
+                bordercolor="rgba(0,0,0,0.1)",
+                font_size=12,
+                align="left"
+            ),
+            # 为动态图表设置合适的x轴配置
+            xaxis=dict(
+                **self.chart_config['grid_config'],
+                # 自动设置x轴范围以适应数据索引
+                range=[0, len(data) - 1],
+                autorange=False,
+                # 根据数据长度动态设置刻度间隔
+                tickmode='linear',
+                dtick=max(1, len(data) // 10),  # 大约显示10个刻度
+                tickangle=45
+            ),
+            yaxis=yaxis_config
+        )
+        
+        # 优化网格和轴样式
+        fig.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)',
+            showline=True,
+            linewidth=1,
+            linecolor='rgba(128,128,128,0.3)'
+        )
+        
+        fig.update_yaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.2)',
+            showline=True,
+            linewidth=1,
+            linecolor='rgba(128,128,128,0.3)'
+        )
+        
+        return fig
 
 
 class ZoomController:
