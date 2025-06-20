@@ -8,7 +8,7 @@
 
 ```
 |
-├── main_streamlit_modular.py  # 模块化主文件
+├── main_streamlit.py          # 模块化主文件
 ├── config.py                  # 配置文件
 ├── file_handler.py           # 文件处理模块
 ├── ai_chat.py                # AI聊天模块
