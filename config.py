@@ -7,7 +7,7 @@ import plotly.express as px
 
 # 应用程序基本配置
 APP_CONFIG = {
-    'page_title': 'Data Analysis',
+    'page_title': 'Data Analysis v2.1.0',
     'page_icon': '📊',
     'layout': 'wide'
 }
@@ -80,7 +80,7 @@ CHART_CONFIG = {
 
 # 版权信息
 COPYRIGHT_INFO = {
-    'text': 'Copyright © 2024 海航航空技术有限公司. All Rights Reserved.',
+    'text': 'Copyright © 2025 海航航空技术有限公司. All Rights Reserved.',
     'description': '本应用程序受著作权法和其他知识产权法保护。未经授权，禁止复制、修改或分发本程序的任何部分。',
     'email': 'kangy_wang@hnair.com'
 }
