@@ -143,7 +143,7 @@ streamlit run main_streamlit.py
 
 - 一次性编码检测和数据读取
 - 智能缓存机制
--### 内存优化的数据处理
+- 内存优化的数据处理
 
 ### GIF导出优化
 - **智能帧数调整**: 根据数据量动态调整GIF的帧数和每帧持续时间，优化生成速度和文件大小。
@@ -153,7 +153,7 @@ streamlit run main_streamlit.py
 ## 🐛 问题反馈
 
 如遇到问题，请通过以下方式反馈：
-- 邮箱: bug-report: kangy_wang@hnair.com
+- 邮箱: kangy_wang@hnair.com
 - 在代码中查看具体错误信息
 - 检查依赖包是否正确安装
 
