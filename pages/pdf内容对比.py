@@ -167,17 +167,7 @@ def main():
         else:
             st.info("💡 PDF查看器不可用\n可选安装: streamlit-pdf-viewer")
         
-        st.header("📦 安装说明")
-        st.code("""
-# 安装基础依赖
-pip install streamlit pdfplumber
 
-# 安装PDF预览功能
-pip install pdf2image Pillow
-
-# 安装PDF查看器（可选）
-pip install streamlit-pdf-viewer
-        """)
     
     # 主内容区域
     upload_tab, preview_tab, analysis_tab = st.tabs(["📤 文件上传", "👁️ PDF预览", "🔍 差异分析"])
