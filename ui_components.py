@@ -471,6 +471,8 @@ class UIComponents:
         Returns:
             dict: API配置信息
         """
+        from ai_chat import ChatProcessor
+        
         with st.sidebar:
             st.subheader("🔧 AI配置")
             
@@ -483,6 +485,42 @@ class UIComponents:
                 type="password",
                 help="请输入您的DeepSeek API密钥"
             )
+            
+            # API连接验证部分
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                test_button = st.button(
+                    "🔍 测试连接", 
+                    use_container_width=True,
+                    disabled=not api_key or api_key.strip() == ""
+                )
+            
+            with col2:
+                if st.button("🗑️ 清除状态", use_container_width=True):
+                    if 'api_test_result' in st.session_state:
+                        del st.session_state.api_test_result
+            
+            # 执行API测试
+            if test_button and api_key:
+                with st.spinner("正在测试API连接..."):
+                    test_result = ChatProcessor.test_api_key(api_key)
+                    st.session_state.api_test_result = test_result
+            
+            # 显示测试结果
+            if 'api_test_result' in st.session_state:
+                result = st.session_state.api_test_result
+                
+                if result['success']:
+                    st.success(f"{result['message']}\n响应时间: {result['response_time']}秒")
+                else:
+                    st.error(result['message'])
+                    if result['response_time'] > 0:
+                        st.caption(f"响应时间: {result['response_time']}秒")
+            
+            # 如果有API密钥但未测试，显示提示
+            elif api_key and api_key.strip() != "":
+                st.warning("💡 建议点击'测试连接'验证API密钥是否有效")
             
             return {
                 'provider': model_provider,

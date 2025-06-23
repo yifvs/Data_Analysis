@@ -8,7 +8,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
-from typing import Dict, List
+from typing import Dict, List, Any
 from config import DEEPSEEK_CONFIG, SYSTEM_TEMPLATE
 from data_analysis_tools import DataAnalysisTools, analyze_data_with_tools
 
@@ -65,6 +65,93 @@ class DeepSeekChatModel:
             return f"响应格式错误：{str(e)}"
         except Exception as e:
             return f"处理出错：{str(e)}"
+    
+    def test_api_connection(self) -> Dict[str, Any]:
+        """
+        测试API连接是否正常
+        
+        Returns:
+            Dict[str, Any]: 包含连接状态和消息的字典
+                - success: bool, 连接是否成功
+                - message: str, 状态消息
+                - response_time: float, 响应时间（秒）
+        """
+        import time
+        
+        try:
+            start_time = time.time()
+            
+            # 发送一个简单的测试消息
+            test_messages = [
+                {"role": "user", "content": "你好，这是一个连接测试。请简单回复'连接成功'。"}
+            ]
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "model": self.model_name,
+                "messages": test_messages,
+                "temperature": 0.1,
+                "max_tokens": 50
+            }
+            
+            response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+            response_time = time.time() - start_time
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                if "choices" in response_data and len(response_data["choices"]) > 0:
+                    return {
+                        "success": True,
+                        "message": "✅ API连接成功！响应正常。",
+                        "response_time": round(response_time, 2)
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": "❌ API响应格式异常，请检查API配置。",
+                        "response_time": round(response_time, 2)
+                    }
+            elif response.status_code == 401:
+                return {
+                    "success": False,
+                    "message": "❌ API密钥无效，请检查您的API Key。",
+                    "response_time": round(response_time, 2)
+                }
+            elif response.status_code == 429:
+                return {
+                    "success": False,
+                    "message": "❌ API调用频率超限，请稍后再试。",
+                    "response_time": round(response_time, 2)
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": f"❌ API调用失败，状态码: {response.status_code}",
+                    "response_time": round(response_time, 2)
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "message": "❌ 连接超时，请检查网络连接。",
+                "response_time": 30.0
+            }
+        except requests.exceptions.ConnectionError:
+            return {
+                "success": False,
+                "message": "❌ 网络连接错误，请检查网络设置。",
+                "response_time": 0.0
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ 连接测试失败: {str(e)}",
+                "response_time": 0.0
+            }
     
     def analyze_data(self, user_input: str, data: pd.DataFrame) -> str:
         """
@@ -143,6 +230,36 @@ class ChatProcessor:
         初始化聊天处理器
         """
         self.deepseek_model = None
+    
+    @staticmethod
+    def test_api_key(api_key: str, model_name: str = None) -> Dict[str, Any]:
+        """
+        测试API密钥是否有效
+        
+        Args:
+            api_key: API密钥
+            model_name: 模型名称，默认使用配置中的模型
+            
+        Returns:
+            Dict[str, Any]: 测试结果
+        """
+        if not api_key or api_key.strip() == "":
+            return {
+                "success": False,
+                "message": "❌ 请输入API密钥",
+                "response_time": 0.0
+            }
+        
+        try:
+            # 创建临时的DeepSeek模型实例进行测试
+            temp_model = DeepSeekChatModel(api_key.strip(), model_name)
+            return temp_model.test_api_connection()
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"❌ 测试过程中出现错误: {str(e)}",
+                "response_time": 0.0
+            }
     
     def setup_deepseek_model(self, api_key: str, model_name: str = None) -> bool:
         """
