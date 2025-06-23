@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 **推荐使用模块化版本：**
 ```bash
-streamlit run main_streamlit_modular.py
+streamlit run main_streamlit.py
 ```
 
 **或使用原始版本：**
