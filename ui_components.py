@@ -320,12 +320,15 @@ class UIComponents:
         with style_col1:
             chart_type = st.selectbox(
                 "图表类型",
-                ['line', 'bar', 'scatter', 'area'],
+                ['line', 'bar', 'scatter', 'area', 'pie', 'donut', 'radar'],
                 format_func=lambda x: {
                     'line': '📈 折线图',
                     'bar': '📊 柱状图', 
                     'scatter': '🔵 散点图',
-                    'area': '📊 面积图'
+                    'area': '📊 面积图',
+                    'pie': '🥧 饼图',
+                    'donut': '🍩 环形图',
+                    'radar': '🎯 雷达图'
                 }[x],
                 help="选择图表显示类型"
             )

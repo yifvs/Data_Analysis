@@ -149,6 +149,18 @@ class ChartGenerator:
                                 f'{custom_config.get("y_title", "数值")}: %{{y}}<extra></extra>'
                 ))
         
+        # 处理饼图类型
+        if chart_type == 'pie':
+            return self._create_pie_chart(data, x_column, y_columns, custom_config, colors)
+        
+        # 处理环形图类型
+        elif chart_type == 'donut':
+            return self._create_donut_chart(data, x_column, y_columns, custom_config, colors)
+        
+        # 处理雷达图类型
+        elif chart_type == 'radar':
+            return self._create_radar_chart(data, x_column, y_columns, custom_config, colors)
+        
         # 更新布局
         fig.update_layout(
             title=dict(
@@ -1248,6 +1260,456 @@ class ChartGenerator:
             showline=True,
             linewidth=1,
             linecolor='rgba(128,128,128,0.3)'
+        )
+        
+        return fig
+    
+    def _create_pie_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                         custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建饼图
+        
+        Args:
+            data: 数据框
+            x_column: X轴列名（用作标签）
+            y_columns: Y轴列名列表（用作数值，只使用第一个）
+            custom_config: 自定义配置
+            colors: 颜色列表
+            
+        Returns:
+            plotly.graph_objects.Figure: 饼图对象
+        """
+        if not y_columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择至少一个Y轴数据列用于饼图",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        # 使用第一个Y轴列作为数值
+        y_column = y_columns[0]
+        
+        # 如果没有指定X轴列，使用索引作为标签
+        if not x_column:
+            labels = data.index.astype(str)
+            title_suffix = f"按索引分布"
+        else:
+            labels = data[x_column].astype(str)
+            title_suffix = f"按{custom_config.get('x_title', x_column)}分布"
+        
+        values = data[y_column]
+        
+        # 创建饼图
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            name=y_column,
+            marker=dict(
+                colors=colors[:len(labels)] if len(colors) >= len(labels) else colors * (len(labels) // len(colors) + 1),
+                line=dict(color='#FFFFFF', width=2)
+            ),
+            textinfo='label+percent+value',
+            textposition='auto',
+            hovertemplate='<b>%{label}</b><br>' +
+                         f'{custom_config.get("y_title", y_column)}: %{{value}}<br>' +
+                         '占比: %{percent}<extra></extra>'
+        )])
+        
+        # 更新布局
+        fig.update_layout(
+            title=dict(
+                text=f"{custom_config.get('y_title', y_column)} {title_suffix}",
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=1.05
+            ),
+            template='plotly_white',
+            width=800,
+            height=600
+        )
+        
+        return fig
+    
+    def _create_donut_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                           custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建环形图（甜甜圈图）
+        
+        Args:
+            data: 数据框
+            x_column: X轴列名（用作标签）
+            y_columns: Y轴列名列表（用作数值，只使用第一个）
+            custom_config: 自定义配置
+            colors: 颜色列表
+            
+        Returns:
+            plotly.graph_objects.Figure: 环形图对象
+        """
+        if not y_columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择至少一个Y轴数据列用于环形图",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        # 使用第一个Y轴列作为数值
+        y_column = y_columns[0]
+        
+        # 如果没有指定X轴列，使用索引作为标签
+        if not x_column:
+            labels = data.index.astype(str)
+            title_suffix = f"按索引分布"
+        else:
+            labels = data[x_column].astype(str)
+            title_suffix = f"按{custom_config.get('x_title', x_column)}分布"
+        
+        values = data[y_column]
+        total_value = values.sum()
+        
+        # 创建环形图
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            name=y_column,
+            hole=0.4,  # 设置中心空洞大小
+            marker=dict(
+                colors=colors[:len(labels)] if len(colors) >= len(labels) else colors * (len(labels) // len(colors) + 1),
+                line=dict(color='#FFFFFF', width=2)
+            ),
+            textinfo='label+percent',
+            textposition='auto',
+            hovertemplate='<b>%{label}</b><br>' +
+                         f'{custom_config.get("y_title", y_column)}: %{{value}}<br>' +
+                         '占比: %{percent}<extra></extra>'
+        )])
+        
+        # 在中心添加总计信息
+        fig.add_annotation(
+            text=f"总计<br><b>{total_value:.1f}</b>",
+            x=0.5, y=0.5,
+            font=dict(size=16, color='#2E86AB'),
+            showarrow=False
+        )
+        
+        # 更新布局
+        fig.update_layout(
+            title=dict(
+                text=f"{custom_config.get('y_title', y_column)} {title_suffix}",
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=1.05
+            ),
+            template='plotly_white',
+            width=800,
+            height=600
+        )
+        
+        return fig
+    
+    def _create_radar_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                           custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建雷达图
+        
+        Args:
+            data: 数据框
+            x_column: X轴列名（用作分组，如果为空则使用索引）
+            y_columns: Y轴列名列表（用作雷达图的各个维度）
+            custom_config: 自定义配置
+            colors: 颜色列表
+            
+        Returns:
+            plotly.graph_objects.Figure: 雷达图对象
+        """
+        if len(y_columns) < 3:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="雷达图需要至少3个Y轴数据列作为维度",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        fig = go.Figure()
+        
+        # 如果指定了X轴列，按X轴列分组创建多个雷达图
+        if x_column:
+            unique_groups = data[x_column].unique()
+            for i, group in enumerate(unique_groups):
+                group_data = data[data[x_column] == group]
+                if len(group_data) > 0:
+                    # 计算每个维度的平均值
+                    values = [group_data[col].mean() for col in y_columns]
+                    
+                    fig.add_trace(go.Scatterpolar(
+                        r=values,
+                        theta=y_columns,
+                        fill='toself',
+                        name=str(group),
+                        line=dict(color=colors[i % len(colors)]),
+                        marker=dict(color=colors[i % len(colors)], size=8),
+                        hovertemplate='<b>%{fullData.name}</b><br>' +
+                                     '维度: %{theta}<br>' +
+                                     '数值: %{r:.2f}<extra></extra>'
+                    ))
+        else:
+            # 如果没有指定X轴列，为每一行数据创建雷达图（最多显示前10行）
+            max_rows = min(10, len(data))
+            for i in range(max_rows):
+                row_data = data.iloc[i]
+                values = [row_data[col] for col in y_columns]
+                
+                fig.add_trace(go.Scatterpolar(
+                    r=values,
+                    theta=y_columns,
+                    fill='toself',
+                    name=f"数据行 {i+1}",
+                    line=dict(color=colors[i % len(colors)]),
+                    marker=dict(color=colors[i % len(colors)], size=8),
+                    hovertemplate='<b>%{fullData.name}</b><br>' +
+                                 '维度: %{theta}<br>' +
+                                 '数值: %{r:.2f}<extra></extra>'
+                ))
+        
+        # 更新布局
+        title_text = f"{custom_config.get('y_title', '多维度')}雷达图"
+        if x_column:
+            title_text += f" - 按{custom_config.get('x_title', x_column)}分组"
+        
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, max([data[col].max() for col in y_columns])]
+                )
+            ),
+            title=dict(
+                text=title_text,
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            legend=dict(
+                orientation="v",
+                yanchor="top",
+                y=1,
+                xanchor="left",
+                x=1.05
+            ),
+            template='plotly_white',
+            width=800,
+            height=600
+        )
+        
+        return fig
+    
+    def _create_pie_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                         custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建饼图
+        """
+        if not y_columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择至少一个Y轴数据列用于饼图",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        y_column = y_columns[0]
+        
+        if not x_column:
+            labels = data.index.astype(str)
+            title_suffix = f"按索引分布"
+        else:
+            labels = data[x_column].astype(str)
+            title_suffix = f"按{custom_config.get('x_title', x_column)}分布"
+        
+        values = data[y_column]
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            name=y_column,
+            marker=dict(
+                colors=colors[:len(labels)] if len(colors) >= len(labels) else colors * (len(labels) // len(colors) + 1),
+                line=dict(color='#FFFFFF', width=2)
+            ),
+            textinfo='label+percent+value',
+            textposition='auto',
+            hovertemplate='<b>%{label}</b><br>' +
+                         f'{custom_config.get("y_title", y_column)}: %{{value}}<br>' +
+                         '占比: %{percent}<extra></extra>'
+        )])
+        
+        fig.update_layout(
+            title=dict(
+                text=f"{custom_config.get('y_title', y_column)} {title_suffix}",
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            template='plotly_white',
+            width=800,
+            height=600
+        )
+        
+        return fig
+    
+    def _create_donut_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                           custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建环形图（甜甜圈图）
+        """
+        if not y_columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择至少一个Y轴数据列用于环形图",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        y_column = y_columns[0]
+        
+        if not x_column:
+            labels = data.index.astype(str)
+            title_suffix = f"按索引分布"
+        else:
+            labels = data[x_column].astype(str)
+            title_suffix = f"按{custom_config.get('x_title', x_column)}分布"
+        
+        values = data[y_column]
+        total_value = values.sum()
+        
+        fig = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            name=y_column,
+            hole=0.4,
+            marker=dict(
+                colors=colors[:len(labels)] if len(colors) >= len(labels) else colors * (len(labels) // len(colors) + 1),
+                line=dict(color='#FFFFFF', width=2)
+            ),
+            textinfo='label+percent',
+            textposition='auto',
+            hovertemplate='<b>%{label}</b><br>' +
+                         f'{custom_config.get("y_title", y_column)}: %{{value}}<br>' +
+                         '占比: %{percent}<extra></extra>'
+        )])
+        
+        fig.add_annotation(
+            text=f"总计<br><b>{total_value:.1f}</b>",
+            x=0.5, y=0.5,
+            font=dict(size=16, color='#2E86AB'),
+            showarrow=False
+        )
+        
+        fig.update_layout(
+            title=dict(
+                text=f"{custom_config.get('y_title', y_column)} {title_suffix}",
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            template='plotly_white',
+            width=800,
+            height=600
+        )
+        
+        return fig
+    
+    def _create_radar_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+                           custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
+        """
+        创建雷达图
+        """
+        if len(y_columns) < 3:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="雷达图需要至少3个Y轴数据列作为维度",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
+        fig = go.Figure()
+        
+        if x_column:
+            unique_groups = data[x_column].unique()
+            for i, group in enumerate(unique_groups):
+                group_data = data[data[x_column] == group]
+                if len(group_data) > 0:
+                    values = [group_data[col].mean() for col in y_columns]
+                    
+                    fig.add_trace(go.Scatterpolar(
+                        r=values,
+                        theta=y_columns,
+                        fill='toself',
+                        name=str(group),
+                        line=dict(color=colors[i % len(colors)]),
+                        marker=dict(color=colors[i % len(colors)], size=8)
+                    ))
+        else:
+            max_rows = min(10, len(data))
+            for i in range(max_rows):
+                row_data = data.iloc[i]
+                values = [row_data[col] for col in y_columns]
+                
+                fig.add_trace(go.Scatterpolar(
+                    r=values,
+                    theta=y_columns,
+                    fill='toself',
+                    name=f"数据行 {i+1}",
+                    line=dict(color=colors[i % len(colors)]),
+                    marker=dict(color=colors[i % len(colors)], size=8)
+                ))
+        
+        title_text = f"{custom_config.get('y_title', '多维度')}雷达图"
+        if x_column:
+            title_text += f" - 按{custom_config.get('x_title', x_column)}分组"
+        
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, max([data[col].max() for col in y_columns])]
+                )
+            ),
+            title=dict(
+                text=title_text,
+                x=0.5,
+                font=dict(size=16, color='#2E86AB')
+            ),
+            showlegend=True,
+            template='plotly_white',
+            width=800,
+            height=600
         )
         
         return fig
