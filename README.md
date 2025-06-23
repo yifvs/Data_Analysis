@@ -73,7 +73,7 @@ streamlit run main_streamlit_modular.py
 
 **或使用原始版本：**
 ```bash
-streamlit run main_streamlit.py
+streamlit run main_streamlit(backup).py
 ```
 
 ### 3. 访问应用
