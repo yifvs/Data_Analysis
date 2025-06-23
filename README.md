@@ -1,4 +1,4 @@
-# Excel数据可视化分析工具
+# 数据可视化分析工具
 
 ## 📋 项目概述
 
@@ -8,12 +8,13 @@
 
 ```
 |
-├── main_streamlit.py         # 模块化主文件
-├── config.py                 # 配置文件
+├── main_streamlit_modular.py  # 模块化主文件
+├── config.py                  # 配置文件
 ├── file_handler.py           # 文件处理模块
 ├── ai_chat.py                # AI聊天模块
 ├── chart_generator.py        # 图表生成模块
 ├── ui_components.py          # UI组件模块
+├── data_analysis_tools.py    # 数据分析工具模块
 ├── requirements.txt          # 依赖包列表
 └── README.md                 # 项目说明文档
 ```
@@ -48,6 +49,12 @@
 - `UIComponents`: UI组件类
 - `SessionManager`: 会话管理器类
 - 统一的界面组件创建和管理
+
+### 6. data_analysis_tools.py
+- `DataAnalysisTools`: 数据分析工具类
+- `analyze_data_with_tools`: 数据分析函数
+- 提供统计分析、相关性分析、异常值检测、趋势分析、分布分析等功能
+- 为AI聊天模块提供数据分析支持
 
 ## 🚀 快速开始
 
@@ -97,15 +104,16 @@ streamlit run main_streamlit.py
 - 轴分配管理
 
 ### 🤖 AI数据分析
-- **DeepSeek API**: 直接API调用，支持智能分析工具选择
+- **DeepSeek API**: 直接API调用
 
-#### 新增分析功能
-- **统计分析**: 描述性统计、数据概览
+#### 分析功能
+- **统计分析**: 描述性统计、数据概览、缺失值统计
 - **相关性分析**: 变量间相关性计算和强相关性识别
 - **异常值检测**: IQR方法检测数据异常值
 - **趋势分析**: 线性趋势检测和显著性检验
-- **分布分析**: 偏度、峰度、正态性检验
+- **分布分析**: 偏度、峰度、正态性检验（Shapiro-Wilk检验）
 - **智能洞察**: 自动生成数据洞察和建议
+- **综合分析**: 一键获取所有分析结果
 
 ### 🔧 数据清洗
 - 重复行移除
@@ -178,4 +186,4 @@ streamlit run main_streamlit.py
 - ✅ 图表生成
 
 
-**更新时间**: 2025年6月20日
+**更新时间**: 2025年6月23日
