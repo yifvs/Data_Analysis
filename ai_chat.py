@@ -153,13 +153,14 @@ class DeepSeekChatModel:
                 "response_time": 0.0
             }
     
-    def analyze_data(self, user_input: str, data: pd.DataFrame) -> str:
+    def analyze_data(self, user_input: str, data: pd.DataFrame, chat_history: List[Dict[str, str]] = None) -> str:
         """
-        分析数据并生成响应
+        分析数据并生成响应（支持多轮对话）
         
         Args:
             user_input: 用户输入
             data: 数据框
+            chat_history: 聊天历史记录
             
         Returns:
             str: 分析结果
@@ -182,14 +183,71 @@ class DeepSeekChatModel:
         
         用户问题：{user_input}
         
-        请基于以上实际分析结果回答用户问题，提供专业的数据洞察和解释。"""
+        请基于以上实际分析结果回答用户问题，提供专业的数据洞察和解释。如果用户提到了之前的对话内容，请结合历史对话上下文进行回答。"""
         
-        messages = [
-            {"role": "system", "content": "你是一个专业的数据分析助手。你已经获得了实际的数据分析结果，请基于这些具体的数值和统计信息来回答用户问题，提供专业、准确的数据洞察。请用中文回答。"},
-            {"role": "user", "content": data_info}
-        ]
+        # 构建包含历史对话的消息列表
+        messages = self._build_conversation_messages(data_info, chat_history)
         
         return self.call_api(messages)
+    
+    def _build_conversation_messages(self, data_info: str, chat_history: List[Dict[str, str]] = None) -> List[Dict[str, str]]:
+        """
+        构建包含历史对话的消息列表
+        
+        Args:
+            data_info: 数据信息和当前问题
+            chat_history: 聊天历史记录
+            
+        Returns:
+            List[Dict[str, str]]: 消息列表
+        """
+        # 系统提示
+        system_message = {
+            "role": "system", 
+            "content": "你是一个专业的数据分析助手。你已经获得了实际的数据分析结果，请基于这些具体的数值和统计信息来回答用户问题，提供专业、准确的数据洞察。你能够记住之前的对话内容，并在回答时结合历史上下文。请用中文回答。"
+        }
+        
+        messages = [system_message]
+        
+        # 添加历史对话上下文（限制长度避免超出API限制）
+        if chat_history:
+            # 只保留最近的对话记录，避免上下文过长
+            recent_history = self._trim_chat_history(chat_history)
+            
+            for message in recent_history:
+                if message['role'] in ['user', 'assistant']:
+                    messages.append({
+                        "role": message['role'],
+                        "content": message['content']
+                    })
+        
+        # 添加当前用户问题和数据信息
+        messages.append({"role": "user", "content": data_info})
+        
+        return messages
+    
+    def _trim_chat_history(self, chat_history: List[Dict[str, str]], max_messages: int = 10) -> List[Dict[str, str]]:
+        """
+        修剪聊天历史，保留最近的对话记录
+        
+        Args:
+            chat_history: 完整的聊天历史
+            max_messages: 最大保留的消息数量
+            
+        Returns:
+            List[Dict[str, str]]: 修剪后的聊天历史
+        """
+        if not chat_history or len(chat_history) <= max_messages:
+            return chat_history or []
+        
+        # 保留最近的对话，确保用户和助手的对话成对出现
+        recent_history = chat_history[-max_messages:]
+        
+        # 如果第一条消息是助手回复，则去掉它以保持对话的完整性
+        if recent_history and recent_history[0].get('role') == 'assistant':
+            recent_history = recent_history[1:]
+        
+        return recent_history
     
     def _select_and_execute_analysis(self, user_input: str, data: pd.DataFrame) -> Dict:
         """
@@ -280,7 +338,8 @@ class ChatProcessor:
             return False
     
     def process_chat_input(self, user_input: str, data: pd.DataFrame, 
-                          deepseek_api_key: str = None, deepseek_model: str = None) -> Dict[str, str]:
+                          deepseek_api_key: str = None, deepseek_model: str = None,
+                          chat_history: List[Dict[str, str]] = None) -> Dict[str, str]:
         """
         处理聊天输入
         
@@ -303,7 +362,8 @@ class ChatProcessor:
             
             # 设置并使用DeepSeek模型
             if self.setup_deepseek_model(deepseek_api_key, deepseek_model):
-                api_response = self.deepseek_model.analyze_data(user_input, data)
+                # 传递聊天历史以支持多轮对话
+                api_response = self.deepseek_model.analyze_data(user_input, data, chat_history)
                 response['content'] = api_response
             else:
                 response['content'] = "DeepSeek模型设置失败，请检查配置。"

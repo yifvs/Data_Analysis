@@ -441,21 +441,25 @@ class UIComponents:
         # 聊天历史容器
         chat_container = st.container()
         with chat_container:
-            for i, (role, message) in enumerate(st.session_state.chat_history):
-                if role == "user":
-                    st.markdown(f"**🙋 用户:** {message}")
+            for i, message in enumerate(st.session_state.chat_history):
+                if message['role'] == "user":
+                    st.markdown(f"**🙋 用户:** {message['content']}")
                 else:
-                    st.markdown(f"**🤖 助手:** {message}")
+                    st.markdown(f"**🤖 助手:** {message['content']}")
                 st.markdown("---")
         
         # 输入区域
         col1, col2, col3 = st.columns([6, 1, 1])
         
         with col1:
+            # 使用session_state来控制输入框的值
+            if 'input_key' not in st.session_state:
+                st.session_state.input_key = 0
+            
             user_input = st.text_input(
                 "输入您的问题",
                 placeholder="例如：分析一下数据的趋势...",
-                key="chat_input"
+                key=f"chat_input_{st.session_state.input_key}"
             )
         
         with col2:
@@ -749,8 +753,12 @@ class SessionManager:
             user_message: 用户消息
             assistant_message: 助手回复
         """
-        st.session_state.chat_history.append(("user", user_message))
-        st.session_state.chat_history.append(("assistant", assistant_message))
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+        
+        # 使用字典格式保持与ai_chat.py的一致性
+        st.session_state.chat_history.append({"role": "user", "content": user_message})
+        st.session_state.chat_history.append({"role": "assistant", "content": assistant_message})
     
     @staticmethod
     def clear_chat_history():
