@@ -623,6 +623,8 @@ def main():
             st.rerun()
         
         if send_button and user_input.strip():
+            # 增加input_key以清空输入框
+            st.session_state.input_key += 1
             if not api_config['api_key']:
                 st.error("❌ 请在侧边栏配置API密钥")
             else:
@@ -630,11 +632,15 @@ def main():
                     # 创建AI聊天实例
                     chat_processor = ChatProcessor()
                     
+                    # 获取聊天历史
+                    chat_history = st.session_state.get('chat_history', [])
+                    
                     # 处理聊天请求
                     chat_response = chat_processor.process_chat_input(
                         user_input=user_input,
                         data=current_data,
-                        deepseek_api_key=api_config['api_key']
+                        deepseek_api_key=api_config['api_key'],
+                        chat_history=chat_history
                     )
                     response = chat_response['content']
                     
