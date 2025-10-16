@@ -517,7 +517,7 @@ def main():
     st.markdown("""
     <div class="info-box">
         <h3>🎯 系统功能</h3>
-        <p>本系统基于Boeing 737NG/MAX FUEL MEASURING STICK MANUAL提供精确的燃油量计算功能。本项目仅供学习和研究使用，请勿用于商业用途。</p>
+        <p>本系统基于Boeing 737NG/MAX FUEL MEASURING STICK MANUAL提供精确的燃油量计算功能。仅供学习和研究使用，请勿用于商业用途。</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -577,15 +577,39 @@ def main():
         else:
             dynamic_scale_min = 0.0
             dynamic_scale_max = 100.0
-        default_scale_value = float((dynamic_scale_min + dynamic_scale_max) / 2.0)
-        scale = st.number_input(
+        # 油尺读数默认空值，使用文本输入并在后续解析
+        scale_input = st.text_input(
             "油尺读数",
-            min_value=dynamic_scale_min,
-            max_value=dynamic_scale_max,
-            value=default_scale_value,
-            step=0.1,
+            value="",
+            placeholder=f"请输入刻度值（{dynamic_scale_min:.1f} ~ {dynamic_scale_max:.1f}），支持线性插值",
             help=f"可输入任意刻度值；若不在表格刻度上，将在相邻值间线性插值。有效范围：{dynamic_scale_min:.1f} ~ {dynamic_scale_max:.1f}"
         )
+        # 将字符串解析为浮点数；空串保持为 None
+        scale = None
+        if scale_input.strip() != "":
+            try:
+                scale = float(scale_input.strip())
+            except ValueError:
+                st.markdown(
+                    """
+                    <div class=\"error-box\">
+                        <h4>❌ 输入错误</h4>
+                        <p>油尺读数必须为数字，例如 5.4 或 12.0。</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        # 如果已解析为数值，做范围预检查
+        if scale is not None and not (dynamic_scale_min <= scale <= dynamic_scale_max):
+            st.markdown(
+                f"""
+                <div class=\"error-box\">
+                    <h4>❌ 输入错误</h4>
+                    <p>油尺读数超出有效范围：{dynamic_scale_min:.1f} ~ {dynamic_scale_max:.1f}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         # 燃油密度校正设置
         st.subheader("⚖️ 密度校正")
@@ -622,8 +646,15 @@ def main():
         if 'start_calculation' in locals() and start_calculation:
             # 基于 Excel 的查表计算（支持刻度线性插值）
             validation_errors = []
-            # 插值计算
-            fuel_amount_raw, interp_info = interpolate_fuel_by_scale(ws, float(pitch), selected_wing, float(roll), float(scale))
+            # 校验油尺读数是否已填写
+            if scale is None:
+                validation_errors.append("请输入有效的油尺读数。")
+                fuel_amount_raw, interp_info = None, None
+            else:
+                # 插值计算
+                fuel_amount_raw, interp_info = interpolate_fuel_by_scale(
+                    ws, float(pitch), selected_wing, float(roll), float(scale)
+                )
             if fuel_amount_raw is None:
                 validation_errors.append(interp_info or "插值失败")
             if validation_errors:
