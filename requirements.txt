@@ -23,4 +23,3 @@ streamlit-pdf-viewer
 pdf2image
 poppler-utils
 scipy
-time
