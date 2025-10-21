@@ -1,5 +1,5 @@
 """
-Boeing 737NG 油尺计算器
+Boeing 737NG/737MAX 油尺计算器
 基于油尺读数和滚转角计算燃油量
 """
 
@@ -485,10 +485,81 @@ def main():
     # 初始化变量
     fuel_amount = None
     
+    # 设置页面样式
+    st.markdown("""
+    <style>
+    .main-header {
+        background: linear-gradient(120deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 15px;
+        padding: 25px 35px;
+        margin: 10px 0 35px 0;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05),
+                   0 10px 30px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .main-header h1 {
+        color: #1e40af;
+        font-size: 2.4em;
+        margin-bottom: 20px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .main-header h1 span {
+        font-size: 1.8em;
+        line-height: 1;
+        margin-right: 5px;
+    }
+    .main-header p {
+        color: #334155;
+        font-size: 1.15em;
+        line-height: 1.7;
+        margin: 12px 0;
+        padding-left: 2px;
+    }
+    .main-header p:last-child {
+        color: #64748b;
+        font-size: 0.95em;
+        font-style: italic;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        padding-top: 15px;
+        margin-top: 15px;
+        padding-left: 2px;
+    }
+    .developer-info {
+        margin-top: 20px;
+        background: linear-gradient(to right, #f1f5f9, #e2e8f0);
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        color: #64748b;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+    .developer-info p {
+        margin: 0;
+        line-height: 1.6;
+    }
+    .developer-info .dev-name {
+        color: #475569;
+        font-weight: 500;
+    }
+    .developer-info .dev-date {
+        color: #94a3b8;
+        font-size: 0.95em;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # 主标题
     st.markdown("""
     <div class="main-header">
-        <h1>✈️ Boeing 737NG/MAX 油尺计算器</h1>
+        <h1><span>✈️</span>Boeing 737NG/MAX 油尺计算器</h1>
+        <p>本系统基于Boeing 737NG/MAX FUEL MEASURING STICK MANUAL提供精确的燃油量计算功能。仅供学习和研究使用，请勿用于商业用途。</p>
+        <p>免责声明：本工具仅供参考，实际操作请严格遵循官方手册和相关规定。</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -513,16 +584,8 @@ def main():
         return
     stick_sheets = get_sheetnames_for_sticks(wb)
     
-    # 欢迎信息和功能介绍
-    st.markdown("""
-    <div class="info-box">
-        <h3>🎯 系统功能</h3>
-        <p>本系统基于Boeing 737NG/MAX FUEL MEASURING STICK MANUAL提供精确的燃油量计算功能。仅供学习和研究使用，请勿用于商业用途。</p>
-    </div>
-    """, unsafe_allow_html=True)
     
-    
-    # 侧边栏 - 输入参数（改为基于 Excel 查表）
+    # 侧边栏 - 输入参数
     with st.sidebar:
         st.header("📝 输入参数")
         st.caption(f"当前机型：{model_choice} | 数据文件：{os.path.basename(excel_path)}")
@@ -546,7 +609,7 @@ def main():
         ws = wb[stick_sheet]
 
         # 飞行参数
-        st.subheader("🎛️ 飞行参数")
+        st.subheader("🎛️ 参数")
 
         # 俯仰角候选（来自该工作表）
         pitch_values = get_pitch_values(ws)
@@ -611,10 +674,24 @@ def main():
                 unsafe_allow_html=True,
             )
 
-        # 燃油密度校正设置
+        # 在侧边栏底部添加开发人员信息
+        st.markdown("")  # 添加一些空间
+        st.markdown("")
+        st.markdown("""
+        <div class="developer-info">
+            <p class="dev-name">👨‍💻 开发人员：王康业</p>
+            <p class="dev-date">📅 更新日期：2025年10月21日</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    
+    col1, col2 = st.columns([2, 1])
+
+    with col2:
         st.subheader("⚖️ 密度校正")
         enable_density_correction = st.checkbox(
             "启用燃油密度校正", value=True,
+            key="density_correction_main",
             help="当实际燃油密度 ≠ 6.76 lbs/US gallon 时，按照手册进行校正。"
         )
         density_unit = st.selectbox(
@@ -634,16 +711,12 @@ def main():
             format="%.3f",
             help="示例：更致密 6.85 lbs/US gallon (≈0.810 kg/L)；更稀 6.55 lbs/US gallon (≈0.774 kg/L)"
         )
-        
-        # 开始计算按钮
+        # 开始计算按钮移至右侧模块
         start_calculation = st.button("▶️ 开始计算")
-    
-    # 主要内容区域（简化，仅显示结果和油尺信息）
-    col1, col2 = st.columns([2, 1])
-    
+
     with col1:
         st.subheader("🧮 计算结果")
-        if 'start_calculation' in locals() and start_calculation:
+        if start_calculation:
             # 基于 Excel 的查表计算（支持刻度线性插值）
             validation_errors = []
             # 校验油尺读数是否已填写
@@ -715,28 +788,8 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
         else:
-            st.info("点击左侧的‘开始计算’按钮以执行计算。")
+            st.info("点击右侧的‘开始计算’按钮以执行计算。")
     
-    with col2:
-        st.subheader("📊 当前工作表信息")
-        # 简要显示该工作表的可用角度与行数
-        roll_info_right = get_roll_angles(ws, "Right Wing")
-        roll_info_left = get_roll_angles(ws, "Left Wing")
-        st.markdown(f"""
-        <div class=\"info-box\">
-            <h4>{stick_sheet} 概览</h4>
-            <p><strong>总行数:</strong> {ws.max_row}</p>
-            <p><strong>Right Wing 表头横滚角:</strong> {roll_info_right}</p>
-            <p><strong>Left Wing 表头横滚角:</strong> {roll_info_left}</p>
-            <p><strong>默认燃油密度:</strong> 6.76 lbs/US gallon（用于转换表）</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # 移除数据可视化和统计信息（简化UI）
-    
-    # 移除使用说明展开内容（简化）
-    
-    # 移除可用油尺信息表格（简化）
 
 if __name__ == "__main__":
     main()
