@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
 音频频谱分析系统 - Streamlit 版本
-上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
+功能与 Web 版完全一致：上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
+
+运行方式：
+    pip install streamlit numpy scipy plotly kaleido soundfile openai
+    streamlit run audio_analyzer.py --server.port 8501
 """
 
 import io
@@ -105,6 +109,13 @@ hr, hr + * { display:none !important; }
 /* 强制状态消息容器不被裁剪 */
 div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
 [data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
+/* 精准隐藏云端环境泄露的 Streamlit 内部 aria-label fallback 文本
+   （如 keyboard_double_、arrow_down 等），这些是图标/按钮的无障碍描述，
+   不应作为可见文字显示。不影响正常 emoji 渲染。 */
+.stApp span[aria-label]:not([data-testid]):not([class*="markdown"]),
+.stApp [role="button"] span:not(:first-child),
+.stExpander summary > div + span,
+button span[aria-hidden] { display:none !important; font-size:0 !important; width:0 !important; overflow:hidden !important; }
 </style>""", unsafe_allow_html=True)
 
 
