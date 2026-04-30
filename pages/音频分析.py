@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-音频频谱分析系统 - Streamlit 版本
-功能与 Web 版完全一致：上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
-
-运行方式：
-    pip install streamlit numpy scipy matplotlib soundfile librosa openai
-    streamlit run audio_analyzer.py --server.port 8501
+音频频谱分析系统
+上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
 """
 
 import base64
@@ -25,7 +21,7 @@ matplotlib.use("Agg")  # 必须在 import pyplot 之前
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties, fontManager
 
-# ── 中文字体配置（直接用字体文件路径，最可靠）──
+# ── 中文字体配置 ──
 _ZH_FONT_FILE = None
 _ZH_CANDIDATES = [
     # Windows: 微软雅黑
