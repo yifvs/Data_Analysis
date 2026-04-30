@@ -1038,7 +1038,7 @@ def main():
 
     with c_left:
         analyze_clicked = st.button(
-            "▶ 开始分析",
+            "▶  开始分析",
             type="primary",
             use_container_width=True,
             disabled=not uploaded_file,
@@ -1046,7 +1046,7 @@ def main():
 
     with c_right:
         download_clicked = st.button(
-            "⬇ 导出 HTML 报告",
+            "⬇  导出 HTML 报告",
             use_container_width=True,
             disabled=not st.session_state.analysis_result,
         )
@@ -1175,7 +1175,7 @@ def render_results(result: dict):
         st.caption("STFT 时频谱图 · Hann 窗 · ~75% 重叠 · 对数幅度压缩")
 
     # ════ 频谱峰值 ════
-    st.subheader("📋 频谱峰值")
+    st.subheader("📋  频谱峰值")
     if result["spectrum_peaks"]:
         peak_data = [
             {"频率": f"{p['frequency']:.1f} Hz", "相对强度": f"{p['magnitude']*100:.1f}%", "频段": p["label"]}
@@ -1186,7 +1186,7 @@ def render_results(result: dict):
         st.info("未检测到明显峰值信号")
 
     # ════ 缺陷诊断 ════
-    st.subheader("⚠️ 缺陷诊断")
+    st.subheader("⚠️  缺陷诊断")
     if result["defects"]:
         defect_data = []
         for d in result["defects"]:
@@ -1202,7 +1202,7 @@ def render_results(result: dict):
         st.success("未检测到异常缺陷，音频信号质量良好")
 
     # ════ AI 分析 ════
-    with st.expander("🤖 AI 智能分析报告", expanded=False):
+    with st.expander("🤖  AI 智能分析报告", expanded=False):
         _ai_html = f"<div style='background:#fafbff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;" \
                    f"white-space:pre-wrap;line-height:1.9;color:#334155;font-size:14px;'>" \
                    f"{result['ai_analysis']}</div>"
@@ -1211,7 +1211,7 @@ def render_results(result: dict):
     # ════ 分析历史 ════
     history = st.session_state.analysis_history or []
     if history:
-        st.subheader("🕐 分析历史")
+        st.subheader("🕐  分析历史")
         n_cols = min(len(history), 5)
         hist_cols = st.columns(n_cols)
         for i, entry in enumerate(history):
