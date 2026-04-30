@@ -38,146 +38,146 @@ st.set_page_config(
 )
 
 # ── 现代浅色主题（干净明亮 + 圆角卡片 + 精致阴影）──
-st.markdown("""<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-* { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
+# st.markdown("""<style>
+# @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+# * { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
 
-.stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
-.main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
-.stAppDeployButton { display:none !important; }
+# .stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
+# .main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
+# .stAppDeployButton { display:none !important; }
 
-.css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
-.css-154b5vr { padding:24px 16px 12px !important; }
-.css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
-h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
-h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
-p { color:#475569 !important; line-height:1.7 !important; }
+# .css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
+# .css-154b5vr { padding:24px 16px 12px !important; }
+# .css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
+# h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
+# h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
+# p { color:#475569 !important; line-height:1.7 !important; }
 
-.stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
-.stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
-.stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
-/* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
-.stFileUploader span[data-testid="stMarkdownContainer"],
-.stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
-.stFileUploader div[data-testid="stCaptionContainer"] + div,
-.stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
-.stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
+# .stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
+# .stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
+# .stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
+# /* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
+# .stFileUploader span[data-testid="stMarkdownContainer"],
+# .stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
+# .stFileUploader div[data-testid="stCaptionContainer"] + div,
+# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
+# .stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
 
-.stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
-.stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
+# .stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
+# .stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
 
-.stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
-.stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
-.stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
-.stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
-.stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
+# .stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
+# .stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
+# .stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
+# .stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
+# .stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
 
-.stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-.stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
-.stProgress { margin-bottom:8px !important; }
-[data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
+# .stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
+# @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+# .stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
+# .stProgress { margin-bottom:8px !important; }
+# [data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
 
-.stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
-.stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
-.stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
-.stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
+# .stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
+# .stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
+# .stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
+# .stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
 
-.stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-.stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
-.stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
-.stDataFrame table tr:hover td { background:#fafbff !important; }
+# .stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+# .stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
+# .stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
+# .stDataFrame table tr:hover td { background:#fafbff !important; }
 
-.stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-.stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
-.stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
+# .stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+# .stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
+# .stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
 
-.stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-.stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
+# .stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+# .stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
 
-.stCaption { color:#94a3b8 !important; font-size:12px !important; }
-hr, hr + * { display:none !important; }
-.stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
-.stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
-.stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-.stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-.stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-.stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-.stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-.stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+# .stCaption { color:#94a3b8 !important; font-size:12px !important; }
+# hr, hr + * { display:none !important; }
+# .stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
+# .stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
+# .stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+# .stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+# .stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+# .stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+# .stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+# .stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
 
-/* 强制状态消息容器不被裁剪 */
-div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
-[data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
-/* ═════════════════  云端环境 Material Icon 泄露文本修复  ═════════════════
-   根因：云端环境 Material Icons 字体未加载，icon ligature 文本泄露为可见文字。
-   三处泄露：① Uploader 内 "upload"  ② Expander 内 "_arrow"  ③ Sidebar 内 "keyboard_double_..."
-   治本：引入 Google Fonts Material Icons   治标：对三处容器做核弹级隐藏 */
+# /* 强制状态消息容器不被裁剪 */
+# div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
+# [data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
+# /* ═════════════════  云端环境 Material Icon 泄露文本修复  ═════════════════
+#    根因：云端环境 Material Icons 字体未加载，icon ligature 文本泄露为可见文字。
+#    三处泄露：① Uploader 内 "upload"  ② Expander 内 "_arrow"  ③ Sidebar 内 "keyboard_double_..."
+#    治本：引入 Google Fonts Material Icons   治标：对三处容器做核弹级隐藏 */
 
-/* A. @import Material Icons 字体（治本：让 ligature 渲染为图标而非文本） */
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
+# /* A. @import Material Icons 字体（治本：让 ligature 渲染为图标而非文本） */
+# @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+# @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
 
-/* B1. FileUploader: 核弹级隐藏内部按钮（upload 泄露源），恢复上传区域 */
-.stFileUploader [data-baseweb="file-uploader"] > div:first-child,
-.stFileUploader [data-baseweb="file-uploader"] > div:first-child > *,
-.stFileUploader [data-baseweb="file-uploader"] button,
-.stFileUploader [data-baseweb="file-uploader"] button *,
-.stFileUploader [role="button"]:not(.stFileUploaderDropContainer) {
-  font-size: 0 !important;
-  line-height: 0 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-  visibility: hidden !important;
-  display: none !important;
-}
-/* 但恢复上传区域本身的可见性 */
-.stFileUploader .stFileUploaderDropContainer,
-.stFileUploader .stFileUploaderDropContainer * {
-  font-size: inherit !important;
-  line-height: inherit !important;
-  visibility: visible !important;
-  display: block !important;
-  overflow: visible !important;
-}
+# /* B1. FileUploader: 核弹级隐藏内部按钮（upload 泄露源），恢复上传区域 */
+# .stFileUploader [data-baseweb="file-uploader"] > div:first-child,
+# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > *,
+# .stFileUploader [data-baseweb="file-uploader"] button,
+# .stFileUploader [data-baseweb="file-uploader"] button *,
+# .stFileUploader [role="button"]:not(.stFileUploaderDropContainer) {
+#   font-size: 0 !important;
+#   line-height: 0 !important;
+#   height: auto !important;
+#   min-height: 0 !important;
+#   padding: 0 !important;
+#   margin: 0 !important;
+#   overflow: hidden !important;
+#   visibility: hidden !important;
+#   display: none !important;
+# }
+# /* 但恢复上传区域本身的可见性 */
+# .stFileUploader .stFileUploaderDropContainer,
+# .stFileUploader .stFileUploaderDropContainer * {
+#   font-size: inherit !important;
+#   line-height: inherit !important;
+#   visibility: visible !important;
+#   display: block !important;
+#   overflow: visible !important;
+# }
 
-/* B2. Expander: summary 中除第一个子元素外全部隐藏（_arrow 泄露源） */
-.stExpander > summary > :not(:first-child),
-.stExpander > summary > :not(:first-child) * {
-  display: none !important;
-  font-size: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-}
+# /* B2. Expander: summary 中除第一个子元素外全部隐藏（_arrow 泄露源） */
+# .stExpander > summary > :not(:first-child),
+# .stExpander > summary > :not(:first-child) * {
+#   display: none !important;
+#   font-size: 0 !important;
+#   width: 0 !important;
+#   height: 0 !important;
+#   overflow: hidden !important;
+# }
 
-/* B3. Sidebar 导航：隐藏所有非首项的次要文字（keyboard_double_ 泄露源） */
-.stSidebarNav [class*="MenuItems"] span:not(:first-child),
-.stSidebarNav button span:not(:first-child),
-.stSidebarNav a span:not(:first-child),
-.stSidebarNav div[data-testid*="navitem"] span:nth-child(n+2),
-.stSidebarNav [class*="element-container"] span:empty,
-.stSidebarNav [class*="container"] span[aria-hidden],
-.stApp [class*="sidebar"] svg + span,
-.stApp [class*="sidebar"] span:has(+ svg) {
-  display: none !important;
-  font-size: 0 !important;
-  width: 0 !important;
-  overflow: hidden !important;
-}
+# /* B3. Sidebar 导航：隐藏所有非首项的次要文字（keyboard_double_ 泄露源） */
+# .stSidebarNav [class*="MenuItems"] span:not(:first-child),
+# .stSidebarNav button span:not(:first-child),
+# .stSidebarNav a span:not(:first-child),
+# .stSidebarNav div[data-testid*="navitem"] span:nth-child(n+2),
+# .stSidebarNav [class*="element-container"] span:empty,
+# .stSidebarNav [class*="container"] span[aria-hidden],
+# .stApp [class*="sidebar"] svg + span,
+# .stApp [class*="sidebar"] span:has(+ svg) {
+#   display: none !important;
+#   font-size: 0 !important;
+#   width: 0 !important;
+#   overflow: hidden !important;
+# }
 
-/* B4. 全局兜底：所有含 aria-hidden 或空内容的可疑 span */
-.stApp span[aria-hidden="true"],
-.stApp span:empty:not([data-testid]),
-button span[aria-hidden],
-label span[aria-hidden] {
-  display: none !important;
-  font-size: 0 !important;
-}
-</style>""", unsafe_allow_html=True)
+# /* B4. 全局兜底：所有含 aria-hidden 或空内容的可疑 span */
+# .stApp span[aria-hidden="true"],
+# .stApp span:empty:not([data-testid]),
+# button span[aria-hidden],
+# label span[aria-hidden] {
+#   display: none !important;
+#   font-size: 0 !important;
+# }
+# </style>""", unsafe_allow_html=True)
 
 
 # 初始化 session_state
