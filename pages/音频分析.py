@@ -109,14 +109,98 @@ hr, hr + * { display:none !important; }
 /* 强制状态消息容器不被裁剪 */
 div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
 [data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
-/* 精准隐藏云端环境泄露的 Streamlit 内部 aria-label fallback 文本
-   （如 keyboard_double_、arrow_down 等），这些是图标/按钮的无障碍描述，
-   不应作为可见文字显示。不影响正常 emoji 渲染。 */
-.stApp span[aria-label]:not([data-testid]):not([class*="markdown"]),
-.stApp [role="button"] span:not(:first-child),
-.stExpander summary > div + span,
-button span[aria-hidden] { display:none !important; font-size:0 !important; width:0 !important; overflow:hidden !important; }
-</style>""", unsafe_allow_html=True)
+/* ═════════════════  云端环境泄露文本修复  ═════════════════
+   问题根因：云端浏览器将 Streamlit 内部 Material Icon 名称渲染为可见文字。
+   三处泄露：
+   ① FileUploader → 显示 "upload"（按钮 label 泄露）
+   ② Expander summary → 显示 "_arrow"/".arrow_vd"（箭头图标名泄露）
+   ③ Sidebar 导航 → 显示 "keyboard_double_..."（箭头图标名泄露）
+   策略：用 :has() 和属性选择器精准定位 + 文本内容匹配兜底 */
+/* 1) Uploader: 隐藏所有非首元素的内部 span（upload 按钮文本等） */
+.stFileUploader [data-baseweb="file-uploader"] *:not(:first-child):not(input):not(.stFileUploaderDropContainer),
+.stFileUploader button,
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child { position:relative; }
+.stFileUploader [data-baseweb="file-uploader"] *:not(:first-child):not(input):not(.stFileUploaderDropContainer) span,
+.stFileUploader [data-baseweb="file-uploader"] button span,
+.stFileUploader [data-baseweb="file-uploader"] div:first-child span:nth-child(n+2) { display:none !important; font-size:0 !important; }
+/* 2) Expander: 隐藏 summary 中除首 span 外的所有 span（箭头图标名 _arrow 等） */
+.stExpander summary span:not(:first-child) { display:none !important; font-size:0 !important; width:0 !important; }
+/* 3) Sidebar / 全局: 隐藏含 icon 名称关键词的文本节点 */
+.stApp span, .stApp div, .stApp button, .stApp label, .stApp summary {
+  text-overflow: ellipsis;
+}
+/* 兜底：通过 CSS 伪类近似匹配泄露文本（无法纯 CSS 匹配文本内容，
+        此规则作为最后防线隐藏可疑的短文本 span） */
+.stSidebarNav span:not(:first-child):not([data-testid]):not([class*="icon"]),
+.stTabs span[aria-hidden],
+button span[aria-hidden="true"],
+label span:empty,
+summary span:empty { display:none !important; }
+</style>
+<script>
+(function(){
+  /* 泄露文本关键词列表 — Streamlit Material Icon 名称在云端被渲染为可见文字 */
+  var LEAK_PATTERNS = [
+    'upload','keyboard_double','keyboard_arrow','arrow_','arrow_down','arrow_up',
+    'arrow_forward','arrow_back','.arrow_vd','_arrow','expand_more',
+    'expand_less','chevron','add','close','delete','search','menu',
+    'more_vert','more_horiz','settings','info','warning','error'
+  ];
+  function isLeakText(txt) {
+    if (!txt || txt.length > 30) return false;
+    var t = txt.trim().toLowerCase();
+    if (!t) return false;
+    for (var i = 0; i < LEAK_PATTERNS.length; i++) {
+      if (t.indexOf(LEAK_PATTERNS[i]) !== -1) return true;
+    }
+    /* 短文本且含下划线/点号开头的可疑 icon 名 */
+    if ((t.indexOf('_') >= 0 || t.charAt(0) === '.') && t.length < 25) return true;
+    return false;
+  }
+  function cleanNode(node) {
+    if (node.nodeType === 3) { /* Text node */
+      if (isLeakText(node.textContent)) { node.remove(); return true; }
+      return false;
+    }
+    if (node.nodeType === 1) { /* Element */
+      /* 跳过 script/style 以及用户可见的大块内容 */
+      var tag = node.tagName.toLowerCase();
+      if (tag === 'script' || tag === 'style' || tag === 'canvas' || tag === 'code' ||
+          tag === 'pre' || tag === 'textarea' || tag === 'input') return false;
+      var children = [];
+      for (var k = 0; k < node.childNodes.length; k++) children.push(node.childNodes[k]);
+      for (var j = 0; j < children.length; j++) {
+        if (cleanNode(children[j])) { j--; children.splice(j,1); }
+      }
+      /* 如果元素只剩空或只有空白文本，隐藏它 */
+      if (node.childNodes.length === 0 || 
+          (node.childNodes.length === 1 && node.childNodes[0].nodeType === 3 && !node.childNodes[0].textContent.trim())) {
+        if (tag === 'span' || tag === 'button' || tag === 'label' || tag === 'summary') {
+          var s = window.getComputedStyle(node);
+          if (!(s.display === 'none' || s.visibility === 'hidden' || s.fontSize === '0px')) {
+            node.style.display = 'none';
+          }
+        }
+      }
+    }
+    return false;
+  }
+  function sweep() {
+    try {
+      cleanNode(document.body);
+    } catch(e) {}
+  }
+  /* 初始清理 + MutationObserver 持续监控（Streamlit 动态渲染） */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(sweep,100); });
+  } else {
+    setTimeout(sweep,100);
+  }
+  var mo = new MutationObserver(function(){ sweep(); });
+  mo.observe(document.body, { childList:true, subtree:true, characterData:true });
+  setInterval(sweep, 2000);
+})();
+</script>""", unsafe_allow_html=True)
 
 
 # 初始化 session_state
