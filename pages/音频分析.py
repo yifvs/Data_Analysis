@@ -52,6 +52,12 @@ p { color:#475569 !important; line-height:1.7 !important; }
 .stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
 .stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
 .stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
+/* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
+.stFileUploader span[data-testid="stMarkdownContainer"],
+.stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
+.stFileUploader div[data-testid="stCaptionContainer"] + div,
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
+.stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
 
 .stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
 .stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
