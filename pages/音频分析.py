@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-音频频谱分析系统
+音频频谱分析系统 - Streamlit 版本
 上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
 """
 
@@ -17,38 +17,14 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib
-matplotlib.use("Agg")  # 必须在 import pyplot 之前
+matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
-from matplotlib.font_manager import FontProperties, fontManager
 
-# ── 中文字体配置 ──
-_ZH_FONT_FILE = None
-_ZH_CANDIDATES = [
-    # Windows: 微软雅黑
-    r"C:\Windows\Fonts\msyh.ttc",
-    r"C:\Windows\Fonts\msyh.ttf",
-    r"C:\Windows\Fonts\simsun.ttc",
-    r"C:\Windows\Fonts\simhei.ttf",
-    # macOS: 苹方/华文
-    "/System/Library/Fonts/STHeiti Medium.ttc",
-    "/System/Library/Fonts/PingFang.ttc",
-    "/Library/Fonts/Arial Unicode.ttf",
-    # Linux: 常见中文字体
-    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
-]
-for _f in _ZH_CANDIDATES:
-    if os.path.isfile(_f):
-        _ZH_FONT_FILE = _f
-        break
 
-if _ZH_FONT_FILE:
-    _zh_fp = FontProperties(fname=_ZH_FONT_FILE)
-else:
-    _zh_fp = None  # 降级：使用默认字体
-
-plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示为方块
+# ── 中文字体 ──
+plt.rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "SimHei", "Microsoft YaHei", "PingFang SC"]
+plt.rcParams["axes.unicode_minus"] = False
+_zh_fp = None  
 
 import numpy as np
 import soundfile as sf
@@ -490,9 +466,9 @@ def plot_waveform(
     ax.spines["bottom"].set_color("#e2e8f0")
     ax.spines["left"].set_color("#e2e8f0")
     ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_ylabel("幅度", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right", fontproperties=_zh_fp)
+    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10)
+    ax.set_ylabel("幅度", color="#475569", fontsize=10)
+    ax.set_title(title, color="#334155", fontsize=12, loc="right")
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
@@ -540,9 +516,9 @@ def plot_spectrum(
     ax.spines["bottom"].set_color("#e2e8f0")
     ax.spines["left"].set_color("#e2e8f0")
     ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("频率 (Hz)", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_ylabel("幅度", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right", fontproperties=_zh_fp)
+    ax.set_xlabel("频率 (Hz)", color="#475569", fontsize=10)
+    ax.set_ylabel("幅度", color="#475569", fontsize=10)
+    ax.set_title(title, color="#334155", fontsize=12, loc="right")
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
@@ -586,13 +562,13 @@ def plot_spectrogram(
         f_vals[freq_mask],
         log_power[freq_mask, :],
         shading="gouraud",
-        cmap="viridis",
+        cmap="hot",
         norm=Normalize(vmin=0, vmax=1),
     )
 
     # 色带（放在右侧，紧凑排列）
     cbar = fig.colorbar(pcm, ax=ax, shrink=0.85, aspect=25, pad=0.02)
-    cbar.set_label("幅度 (dB)", fontsize=9, fontproperties=_zh_fp, labelpad=6)
+    cbar.set_label("幅度 (dB)", fontsize=9, labelpad=6)
     cbar.ax.tick_params(labelsize=7.5, colors="#64748b")
     cbar.outline.set_edgecolor("#e2e8f0")
     cbar.outline.set_linewidth(0.8)
@@ -603,9 +579,9 @@ def plot_spectrogram(
     ax.spines["bottom"].set_color("#e2e8f0")
     ax.spines["left"].set_color("#e2e8f0")
     ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_ylabel("频率 (Hz)", color="#475569", fontsize=10, fontproperties=_zh_fp)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right", fontproperties=_zh_fp)
+    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10)
+    ax.set_ylabel("频率 (Hz)", color="#475569", fontsize=10)
+    ax.set_title(title, color="#334155", fontsize=12, loc="right")
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
