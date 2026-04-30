@@ -4,7 +4,6 @@
 上传 → STFT/FFT 分析 → 缺陷检测 → AI 诊断 → HTML 报告下载
 """
 
-import base64
 import io
 import json
 import math
@@ -16,20 +15,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import matplotlib
-matplotlib.use("Agg")  
-import matplotlib.pyplot as plt
-
-
-# ── 中文字体 ──
-plt.rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "SimHei", "Microsoft YaHei", "PingFang SC"]
-plt.rcParams["axes.unicode_minus"] = False
-_zh_fp = None  
-
 import numpy as np
 import soundfile as sf
 import streamlit as st
-from matplotlib.colors import Normalize
+import plotly.graph_objects as go
 from scipy.signal import get_window, stft as scipy_stft
 from scipy.fft import fft, fftfreq
 
@@ -425,21 +414,15 @@ def get_quality_grade(score: int) -> str:
     return "不合格"
 
 
-# ────────────────────── 可视化生成 ──────────────────────────
+# ────────────────────── 可视化生成（Plotly） ──────────────────────────
 
 
 def plot_waveform(
     samples: np.ndarray, sample_rate: int, title: str = "时域波形"
-) -> str:
-    """绘制包络波形图，返回 base64 PNG"""
+) -> go.Figure:
+    """绘制包络波形图，返回 Plotly Figure"""
     duration = samples.shape[0] / sample_rate
-    abs_max = np.max(np.abs(samples))
-    if abs_max < 0.01:
-        abs_max = 0.01
-
-    fig, ax = plt.subplots(figsize=(9, 2.8))
-    fig.patch.set_facecolor("#ffffff")
-    ax.set_facecolor("#fafbff")
+    abs_max = np.max(np.abs(samples)) or 0.01
 
     # 包络降采样
     num_cols = 600
@@ -454,29 +437,48 @@ def plot_waveform(
     uppers = [c[1] / abs_max for c in cols]
     lowers = [c[0] / abs_max for c in cols]
 
-    ax.fill_between(xs, lowers, uppers, alpha=0.35, color="#3b82f6", linewidth=0)
-    ax.plot(xs, uppers, color="#60a5fa", linewidth=0.8)
-    ax.plot(xs, lowers, color="#60a5fa", linewidth=0.8)
-    ax.axhline(0, color="#1e293b", linestyle="--", linewidth=0.8)
+    fig = go.Figure()
+    # 填充区域
+    fig.add_trace(go.Scatter(
+        x=list(xs) + list(xs[::-1]),
+        y=uppers + lowers[::-1],
+        fill="toself",
+        fillcolor="rgba(59,130,246,0.30)",
+        line=dict(color="rgba(59,130,246,0)", width=0),
+        hoverinfo="skip",
+        showlegend=False,
+    ))
+    # 上包络
+    fig.add_trace(go.Scatter(
+        x=xs, y=uppers, mode="lines",
+        line=dict(color="#60a5fa", width=1.2),
+        name="上包络", hovertemplate="时间: %{x:.3f}s<br>幅度: %{y:.3f}<extra></extra>",
+    ))
+    # 下包络
+    fig.add_trace(go.Scatter(
+        x=xs, y=lowers, mode="lines",
+        line=dict(color="#60a5fa", width=1.2),
+        name="下包络", hovertemplate="时间: %{x:.3f}s<br>幅度: %{y:.3f}<extra></extra>",
+    ))
+    # 零线
+    fig.add_hline(y=0, line_dash="dash", line_color="#94a3b8", line_width=1)
 
-    ax.set_xlim(0, duration)
-    ax.set_ylim(-1.05, 1.05)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#e2e8f0")
-    ax.spines["left"].set_color("#e2e8f0")
-    ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10)
-    ax.set_ylabel("幅度", color="#475569", fontsize=10)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right")
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode()
-    return f"data:image/png;base64,{b64}"
+    fig.update_layout(
+        title=dict(text=title, x=1, xanchor="right", font_size=13, font_color="#334155"),
+        xaxis_title="时间 (s)",
+        yaxis_title="幅度",
+        xaxis_range=[0, duration],
+        yaxis_range=[-1.05, 1.05],
+        height=260,
+        margin=dict(l=50, r=20, t=40, b=45),
+        paper_bgcolor="white",
+        plot_bgcolor="#fafbff",
+        font=dict(family="-apple-system,BlinkMacSystemFont,sans-serif", size=11, color="#475569"),
+        xaxis=dict(showgrid=False, zerolinecolor="#e2e8f0"),
+        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zerolinecolor="#e2e8f0"),
+        showlegend=False,
+    )
+    return fig
 
 
 def plot_spectrum(
@@ -484,49 +486,52 @@ def plot_spectrum(
     freqs: np.ndarray,
     sample_rate: int,
     title: str = "频率谱",
-) -> str:
-    """绘制频率谱柱状图，返回 base64 PNG"""
+) -> go.Figure:
+    """绘制频率谱柱状图，返回 Plotly Figure"""
     max_freq = min(8000, sample_rate // 2)
     cutoff = min(len(magnitudes), np.searchsorted(freqs, max_freq))
     mags = magnitudes[:cutoff]
     frqs = freqs[:cutoff]
 
-    fig, ax = plt.subplots(figsize=(9, 3.2))
-    fig.patch.set_facecolor("#ffffff")
-    ax.set_facecolor("#fafbff")
-
-    colors = []
     norm = np.max(mags) or 1.0
+    bar_colors = []
     for m in mags:
         r = m / norm
         if r > 0.7:
-            colors.append("#ef4444")
+            bar_colors.append("#ef4444")
         elif r > 0.4:
-            colors.append("#f59e0b")
+            bar_colors.append("#f59e0b")
         elif r > 0.2:
-            colors.append("#4f46e5")
+            bar_colors.append("#4f46e5")
         else:
-            colors.append("#93c5fd")
+            bar_colors.append("#93c5fd")
 
-    ax.bar(frqs, mags, width=(np.diff(frqs).mean() if len(frqs) > 1 else 100) * 0.85, color=colors, alpha=0.85, linewidth=0)
+    fig = go.Figure(data=[
+        go.Bar(
+            x=frqs, y=mags,
+            marker_color=bar_colors,
+            marker_opacity=0.85,
+            marker_line_width=0,
+            hovertemplate="频率: %{x:.1f} Hz<br>幅度: %{y:.4f}<extra></extra>",
+        )
+    ])
 
-    ax.set_xlim(0, max_freq)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#e2e8f0")
-    ax.spines["left"].set_color("#e2e8f0")
-    ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("频率 (Hz)", color="#475569", fontsize=10)
-    ax.set_ylabel("幅度", color="#475569", fontsize=10)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right")
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode()
-    return f"data:image/png;base64,{b64}"
+    fig.update_layout(
+        title=dict(text=title, x=1, xanchor="right", font_size=13, font_color="#334155"),
+        xaxis_title="频率 (Hz)",
+        yaxis_title="幅度",
+        xaxis_range=[0, max_freq],
+        height=300,
+        margin=dict(l=50, r=20, t=40, b=45),
+        paper_bgcolor="white",
+        plot_bgcolor="#fafbff",
+        font=dict(family="-apple-system,BlinkMacSystemFont,sans-serif", size=11, color="#475569"),
+        xaxis=dict(showgrid=False, zerolinecolor="#e2e8f0"),
+        yaxis=dict(showgrid=True, gridcolor="#f1f5f9", zerolinecolor="#e2e8f0"),
+        bargap=0,
+        showlegend=False,
+    )
+    return fig
 
 
 def plot_spectrogram(
@@ -534,11 +539,8 @@ def plot_spectrogram(
     sample_rate: int,
     fft_size: int,
     title: str = "STFT 时频谱图",
-) -> str:
-    """
-    使用 scipy.signal.stft 绘制时频谱图（Hann 窗 + 对数压缩）
-    返回 base64 PNG
-    """
+) -> go.Figure:
+    """使用 scipy.signal.stft 绘制时频谱图，返回 Plotly Figure"""
     hop = max(fft_size // 4, 64)
     win = "hann"
     nperseg = fft_size
@@ -547,49 +549,41 @@ def plot_spectrogram(
         samples, fs=sample_rate, window=win, nperseg=nperseg, noverlap=nperseg - hop
     )
 
-    # 幅度谱 + 对数压缩
     power = np.abs(Zxx)
     log_power = np.log10(power * 1000 + 1) / 3
 
     max_freq = min(8000, sample_rate // 2)
     freq_mask = f_vals <= max_freq
 
-    fig, ax = plt.subplots(figsize=(9.5, 4.0))
-    fig.patch.set_facecolor("#ffffff")
+    fig = go.Figure()
+    fig.add_trace(go.Heatmap(
+        z=log_power[freq_mask, :][::-1],  # 翻转Y轴使低频在底部
+        x=t_vals,
+        y=f_vals[freq_mask][::-1],
+        colorscale=[[0, "#000000"], [0.25, "#8B0000"], [0.5, "#FF4500"], [0.75, "#FFD700"], [1, "#FFFF00"]],
+        zmin=0, zmax=1,
+        showscale=True,
+        colorbar=dict(title=dict(text="幅度 (dB)", side="right", font_size=10), thickness=12, len=0.92,
+                     tickfont=dict(size=8)),
+        hovertemplate="时间: %{x:.3f}s<br>频率: %{y:.1f} Hz<br>幅度: %{z:.2f}<extra></extra>",
+    ))
 
-    pcm = ax.pcolormesh(
-        t_vals,
-        f_vals[freq_mask],
-        log_power[freq_mask, :],
-        shading="gouraud",
-        cmap="hot",
-        norm=Normalize(vmin=0, vmax=1),
+    fig.update_layout(
+        title=dict(text=title, x=1, xanchor="right", font_size=13, font_color="#334155"),
+        xaxis_title="时间 (s)",
+        yaxis_title="频率 (Hz)",
+        height=360,
+        margin=dict(l=55, r=35, t=40, b=45),
+        paper_bgcolor="white",
+        plot_bgcolor="#fafbff",
+        font=dict(family="-apple-system,BlinkMacSystemFont,sans-serif", size=11, color="#475569"),
+        xaxis=dict(showgrid=False, zeroline=False),
+        yaxis=dict(showgrid=False, zeroline=False),
     )
+    return fig
 
-    # 色带（放在右侧，紧凑排列）
-    cbar = fig.colorbar(pcm, ax=ax, shrink=0.85, aspect=25, pad=0.02)
-    cbar.set_label("幅度 (dB)", fontsize=9, labelpad=6)
-    cbar.ax.tick_params(labelsize=7.5, colors="#64748b")
-    cbar.outline.set_edgecolor("#e2e8f0")
-    cbar.outline.set_linewidth(0.8)
 
-    ax.set_ylim(0, max_freq)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#e2e8f0")
-    ax.spines["left"].set_color("#e2e8f0")
-    ax.tick_params(colors="#64748b", labelsize=8)
-    ax.set_xlabel("时间 (s)", color="#475569", fontsize=10)
-    ax.set_ylabel("频率 (Hz)", color="#475569", fontsize=10)
-    ax.set_title(title, color="#334155", fontsize=12, loc="right")
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode()
-    return f"data:image/png;base64,{b64}"
 
 
 # ──────────────────────── AI 分析 ────────────────────────────
@@ -733,13 +727,25 @@ def _fallback_analysis(
 
 
 def generate_report_html(result: dict) -> str:
-    """生成完整 HTML 报告（内嵌 base64 图片）"""
+    """生成完整 HTML 报告（内嵌 Plotly 交互式图表，无需 kaleido）"""
+
+    def fig_to_html_div(fig) -> str:
+        """将 Plotly Figure 转为独立 HTML div（含 Plotly.js CDN）"""
+        try:
+            return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"displayModeBar": True})
+        except Exception:
+            return "<p style='color:#94a3b8;text-align:center;padding:20px;'>图表渲染失败</p>"
 
     def sev_cn(s):
         return {"high": "严重", "medium": "中等", "low": "轻微"}[s]
 
     def sev_color(s):
         return {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}[s]
+
+    # 将 Plotly Figure 转为内嵌 HTML（无需 kaleido）
+    _wf = fig_to_html_div(result["waveform_fig"])
+    _sf = fig_to_html_div(result["spectrum_fig"])
+    _stf = fig_to_html_div(result["spectrogram_fig"])
 
     defect_rows = "\n".join([
         f"""<tr>
@@ -810,17 +816,17 @@ td {{ padding:10px 14px; border-bottom:1px solid #f1f5f9; }}
 
 <div class="card">
 <h2>📈 时域波形（包络）</h2>
-<img class="chart-img" src="{result['waveform_img']}" alt="波形图"/>
+{_wf}
 </div>
 
 <div class="card">
 <h2>🔊 频率谱 (FFT)</h2>
-<img class="chart-img" src="{result['spectrum_img']}" alt="频谱图"/>
+{_sf}
 </div>
 
 <div class="card">
 <h2>🌡️ STFT 时频谱图</h2>
-<img class="chart-img" src="{result['spectrogram_img']}" alt="时频谱图"/>
+{_stf}
 <p style="margin-top:8px;color:#64748b;font-size:12px;">
 算法: Hann窗短时傅里叶变换 | 窗长={result.get('fft_size','N/A')} | 重叠率≈75% | 对数压缩
 </p>
@@ -926,15 +932,12 @@ def run_full_analysis(
         "defects": defects,
         "quality_score": quality_score,
         "quality_grade": quality_grade,
-        "waveform_img": waveform_img,
-        "spectrum_img": spectrum_img,
-        "spectrogram_img": spectrogram_img,
+        "waveform_fig": waveform_img,
+        "spectrum_fig": spectrum_img,
+        "spectrogram_fig": spectrogram_img,
         "ai_analysis": ai_text,
-        "report_html": None,  # 延迟生成
+        "report_html": None,  # 延迟到下载时生成（避免 kaleido 慢）
     }
-
-    # 生成完整 HTML 报告
-    result["report_html"] = generate_report_html(result)
 
     if progress:
         progress(100, "完成")
@@ -1074,10 +1077,12 @@ def main():
             status.error(f"❌ 分析失败: {e}")
             st.exception(e)
 
-    # ── 下载按钮 ──
+    # ── 下载按钮（按需生成报告，避免 kaleido 阻塞主流程）──
     if download_clicked and st.session_state.analysis_result:
         result = st.session_state.analysis_result
-        html_content = result["report_html"]
+        with st.spinner("正在生成 HTML 报告..."):
+            html_content = result.get("report_html") or generate_report_html(result)
+            result["report_html"] = html_content  # 缓存起来避免重复生成
         safe_name = (
             re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(result["file_name"]).stem)
             + "_音频分析报告_"
@@ -1096,7 +1101,14 @@ def main():
     # ── 结果展示区 ──
     result = st.session_state.analysis_result
     if result:
-        render_results(result)
+        # 检测旧版 matplotlib 缓存（base64 字符串 vs 新版 plotly Figure）
+        _old_keys = ("waveform_img", "spectrum_img", "spectrogram_img")
+        if any(_k in result for _k in _old_keys) and "waveform_fig" not in result:
+            # 旧格式不兼容，清除缓存提示重新分析
+            st.session_state.analysis_result = None
+            st.warning("⚠️ 检测到旧版本分析结果缓存，请重新上传文件并分析")
+        else:
+            render_results(result)
 
 
 def render_results(result: dict):
@@ -1107,11 +1119,14 @@ def render_results(result: dict):
     # ════ 统计指标行 ════
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("RMS 电平", f"{result['rms_level']:.1f} dB", delta_color="off")
+        st.metric("RMS 电平", f"{result['rms_level']:.1f} dB", delta_color="off",
+                 help="均方根电平 — 反映音频信号的整体能量/响度。值越大声音越响，正常语音约 -20~-10dB，音乐约 -15~-5dB。0dBFS 为满幅上限。")
     with c2:
-        st.metric("峰值电平", f"{result['peak_level']:.1f} dB", delta_color="off")
+        st.metric("峰值电平", f"{result['peak_level']:.1f} dB", delta_color="off",
+                 help="最大振幅电平 — 采样点中的绝对最大值。接近 0dBFS 时可能存在削波失真（波形顶部被截断），一般应保留至少 3dB 余量。")
     with c3:
-        st.metric("动态范围", f"{result['dynamic_range']:.1f} dB", delta_color="off")
+        st.metric("动态范围", f"{result['dynamic_range']:.1f} dB", delta_color="off",
+                 help='峰值与 RMS 的差值 — 衡量信号的起伏幅度。大动态范围说明有明显的强弱对比（如音乐中的轻柔段落与高潮）；过小说明信号比较"平"，缺乏层次感。')
     with c4:
         st.metric("检测缺陷", f"{len(result['defects'])} 项", delta_color="off")
 
@@ -1142,15 +1157,15 @@ def render_results(result: dict):
     tab_wave, tab_spec, tab_stft = st.tabs(["📊 时域波形", "🎚️ 频率谱 (FFT)", "🌡️ STFT 时频谱"])
 
     with tab_wave:
-        st.image(result["waveform_img"], use_container_width=True)
+        st.plotly_chart(result["waveform_fig"], use_container_width=True, config={"displayModeBar": False})
         st.caption("包络波形 — 像素级 min/max 检测，按峰峰值归一化")
 
     with tab_spec:
-        st.image(result["spectrum_img"], use_container_width=True)
+        st.plotly_chart(result["spectrum_fig"], use_container_width=True, config={"displayModeBar": False})
         st.caption(f"FFT 频率谱 · Hann 窗 (N={result['fft_size']})")
 
     with tab_stft:
-        st.image(result["spectrogram_img"], use_container_width=True)
+        st.plotly_chart(result["spectrogram_fig"], use_container_width=True, config={"displayModeBar": False})
         st.caption("STFT 时频谱图 · Hann 窗 · ~75% 重叠 · 对数幅度压缩")
 
     # ════ 频谱峰值 ════
