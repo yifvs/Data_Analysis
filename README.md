@@ -8,7 +8,7 @@
 
 ```
 |
-├── main_streamli.py           # 模块化主文件
+├── main_streamlit_modular.py  # 模块化主文件
 ├── config.py                  # 配置文件
 ├── file_handler.py           # 文件处理模块
 ├── ai_chat.py                # AI聊天模块
@@ -68,12 +68,12 @@ pip install -r requirements.txt
 
 **推荐使用模块化版本：**
 ```bash
-streamlit run main_streamlit.py
+streamlit run main_streamlit_modular.py
 ```
 
 **或使用原始版本：**
 ```bash
-streamlit run main_streamlit(backup).py
+streamlit run main_streamlit.py
 ```
 
 ### 3. 访问应用
@@ -162,6 +162,9 @@ streamlit run main_streamlit(backup).py
 - 检查依赖包是否正确安装
 
 ## 📝 更新日志
+### v2.2.1 (功能增强与优化)
+- ✅ 修复已知bug
+- ✅ UI界面微调
 
 ### v2.2.0 (功能增强与优化)
 - ✅ 新增自定义轴配置功能，支持灵活的X轴和Y轴数据选择，以及多列数据对比。
@@ -178,7 +181,7 @@ streamlit run main_streamlit(backup).py
 - ✅ 增强的错误处理
 - ✅ 改进的用户界面
 - ✅ 更好的代码组织
-- ✅ AI聊天功能
+- ✅ AI聊天功能(支持多轮对话)
 
 ### v1.0.0 (原始版本)
 - ✅ 基础功能实现
