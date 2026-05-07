@@ -367,28 +367,18 @@ class ChartGenerator:
             if primary_hash_cols:
                 # 获取主轴哈希值列的唯一值和对应的原始字符串
                 col = primary_hash_cols[0]  # 使用第一个哈希值列
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
-                    yaxis_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
-                    })
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
+                    yaxis_config.update(ticks)
         
         if secondary_cols:
             secondary_hash_cols = [col for col in secondary_cols if self._is_hash_column(data, col)]
             if secondary_hash_cols:
                 # 获取副轴哈希值列的唯一值和对应的原始字符串
                 col = secondary_hash_cols[0]  # 使用第一个哈希值列
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
-                    yaxis2_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
-                    })
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
+                    yaxis2_config.update(ticks)
         
         # 配置双轴布局
         fig.update_layout(
@@ -529,40 +519,25 @@ class ChartGenerator:
             primary_hash_cols = [col for col in primary_cols if self._is_hash_column(data, col)]
             if primary_hash_cols:
                 col = primary_hash_cols[0]
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
-                    yaxis_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
-                    })
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
+                    yaxis_config.update(ticks)
         
         if secondary_cols:
             secondary_hash_cols = [col for col in secondary_cols if self._is_hash_column(data, col)]
             if secondary_hash_cols:
                 col = secondary_hash_cols[0]
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
-                    yaxis2_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
-                    })
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
+                    yaxis2_config.update(ticks)
         
         if third_cols:
             third_hash_cols = [col for col in third_cols if self._is_hash_column(data, col)]
             if third_hash_cols:
                 col = third_hash_cols[0]
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
-                    yaxis3_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes]
-                    })
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
+                    yaxis3_config.update(ticks)
         
         # 配置三轴布局
         fig.update_layout(
@@ -668,13 +643,12 @@ class ChartGenerator:
             
             # 为哈希值列设置自定义Y轴刻度
             if self._is_hash_column(data, col):
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
                     fig.update_yaxes(
-                        tickmode='array',
-                        tickvals=unique_hashes,
-                        ticktext=[hash_to_string.get(h, str(h)) for h in unique_hashes],
+                        tickmode=ticks['tickmode'],
+                        tickvals=ticks['tickvals'],
+                        ticktext=ticks['ticktext'],
                         row=row,
                         col=col_pos
                     )
@@ -705,16 +679,27 @@ class ChartGenerator:
         Returns:
             plotly.graph_objects.Figure: 图表对象
         """
+        if not selected_columns:
+            fig = go.Figure()
+            fig.add_annotation(
+                text="请选择要可视化的列",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False, font=dict(size=16)
+            )
+            return fig
+        
         num_plots = len(selected_columns)
         
+        # 创建上下排列的子图（标题通过yaxis.title放在Y轴左侧）
         fig = make_subplots(
             rows=num_plots,
             cols=1,
-            shared_xaxes=True,
-            subplot_titles=selected_columns,
-            vertical_spacing=0.02
+            shared_xaxes=True,  # 共享x轴
+            vertical_spacing=0.08 if num_plots > 1 else 0.3  # 根据子图数量调整间距
         )
         
+        # 为每个子图添加数据
         for i, col in enumerate(selected_columns):
             color = self.colors[i % len(self.colors)]
             
@@ -722,11 +707,13 @@ class ChartGenerator:
             y_values = pd.to_numeric(data[col], errors='coerce')
             # 处理NA值：使用前向填充，如果仍有NA则用0填充
             y_values = y_values.ffill().fillna(0)
+            
             hover_text = None
             if self._is_hash_column(data, col):
                 original_strings = self._get_original_strings(data, col)
                 hover_text = [f"{col}: {orig}<br>索引: {idx}" for idx, orig in zip(data.index, original_strings)]
             
+            # 添加追踪到对应的子图行
             fig.add_trace(
                 go.Scatter(
                     x=data.index,
@@ -734,32 +721,77 @@ class ChartGenerator:
                     mode='lines',
                     name=col,
                     line=dict(color=color, width=1.5),
-                    showlegend=False,
-                    hovertext=hover_text,
-                    hovertemplate='%{hovertext}<extra></extra>' if hover_text else None
+                    showlegend=True,  # 显示图例，这样用户可以识别每个系列
+                    hovertemplate=f'<b>{col}</b><br>X: %{{x}}<br>Y: %{{y}}<extra></extra>',
+                    customdata=[i]*len(data)  # 添加自定义数据用于识别系列
                 ),
-                row=i + 1,
-                col=1
+                row=i + 1,  # 指定行号
+                col=1       # 指定列号
             )
             
             # 为哈希值列设置自定义Y轴刻度
             if self._is_hash_column(data, col):
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
                     fig.update_yaxes(
-                        tickmode='array',
-                        tickvals=unique_hashes,
-                        ticktext=[hash_to_string.get(h, str(h)) for h in unique_hashes],
+                        tickmode=ticks['tickmode'],
+                        tickvals=ticks['tickvals'],
+                        ticktext=ticks['ticktext'],
                         row=i + 1,
                         col=1
                     )
         
+        # 更新布局
         fig.update_layout(
-            height=150 * num_plots,
+            height=200 * num_plots,  # 根据子图数量调整总高度
             width=self.chart_config['default_width'],
-            showlegend=False
+            showlegend=True,  # 显示图例
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            # 关键设置：启用统一悬停模式，显示所有轨迹的值
+            hovermode='x unified',
         )
+        
+        # 为非底部子图隐藏x轴标签，只在底部显示
+        for i in range(1, num_plots):
+            fig.update_xaxes(
+                showticklabels=False,
+                row=i, 
+                col=1
+            )
+        
+        # 特别配置：设置所有y轴的样式，标题放在Y轴左侧
+        for i in range(num_plots):
+            fig.update_yaxes(
+                **self.chart_config['grid_config'],
+                title=dict(text=selected_columns[i], font=dict(size=13, color="#333")),
+                row=i+1,
+                col=1
+            )
+
+        for i in range(num_plots):
+            fig.update_xaxes(
+                spikemode='toaxis',       # 参考线跟随x轴
+                spikesnap='cursor',       # 跟随鼠标光标位置
+                spikecolor='#999999',     # 参考线颜色
+                spikethickness=1,         # 参考线宽度
+                spikedash='dot',          # 参考线样式：实线用 'solid'
+                row=i+1,
+                col=1
+            )
+            fig.update_xaxes(
+                tickmode='linear',
+                dtick=300,
+                tickangle=45,
+                **self.chart_config['grid_config'],
+                row=i+1,
+                col=1
+            )
         
         return fig
     
@@ -799,13 +831,12 @@ class ChartGenerator:
             hash_cols = [col for col in columns if self._is_hash_column(data, col)]
             if hash_cols:
                 col = hash_cols[0]  # 使用第一个哈希值列
-                unique_hashes = sorted(data[col].dropna().unique())
-                if hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings:
-                    hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
+                ticks = self._get_filtered_hash_ticks(data, col)
+                if ticks:
                     yaxis_config.update({
-                        'tickmode': 'array',
-                        'tickvals': unique_hashes,
-                        'ticktext': [hash_to_string.get(h, str(h)) for h in unique_hashes],
+                        'tickmode': ticks['tickmode'],
+                        'tickvals': ticks['tickvals'],
+                        'ticktext': ticks['ticktext'],
                         'autorange': False
                     })
         
@@ -881,6 +912,51 @@ class ChartGenerator:
                 return data[col].astype(str).tolist()
         except:
             return data[col].astype(str).tolist()
+
+    @staticmethod
+    def _is_placeholder_label(label: Any) -> bool:
+        """Return True for placeholder labels that should not appear on axis ticks."""
+        text = str(label).strip()
+        if not text:
+            return True
+        normalized = text.lower()
+        if normalized in {"unknown", "none", "nan", "null", "na", "n/a", "<na>", "??", "?"}:
+            return True
+        if text in {"未知", "鏈煡"}:
+            return True
+        if "未知" in text:
+            return True
+        return False
+
+    def _get_filtered_hash_ticks(self, data: pd.DataFrame, col: str) -> Optional[Dict[str, Any]]:
+        """
+        Build tick mapping for hash columns while filtering placeholder labels like '未知'.
+        """
+        if not (hasattr(st.session_state, 'string_mappings') and col in st.session_state.string_mappings):
+            return None
+
+        hash_to_string = {v: k for k, v in st.session_state.string_mappings[col].items()}
+        unique_hashes = sorted(pd.to_numeric(data[col], errors='coerce').dropna().unique().tolist())
+
+        tickvals = []
+        ticktext = []
+        for hash_val in unique_hashes:
+            label = hash_to_string.get(hash_val)
+            if label is None:
+                continue
+            if self._is_placeholder_label(label):
+                continue
+            tickvals.append(hash_val)
+            ticktext.append(str(label))
+
+        if not tickvals:
+            return None
+
+        return {
+            'tickmode': 'array',
+            'tickvals': tickvals,
+            'ticktext': ticktext
+        }
     
     def _create_animated_chart(self, data: pd.DataFrame, selected_columns: List[str], 
                               animation_frames: int = None) -> go.Figure:
@@ -1524,7 +1600,7 @@ class ChartGenerator:
         
         return fig
     
-    def _create_pie_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+    def _create_pie_chart_v2(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
                          custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
         """
         创建饼图
@@ -1579,7 +1655,7 @@ class ChartGenerator:
         
         return fig
     
-    def _create_donut_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+    def _create_donut_chart_v2(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
                            custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
         """
         创建环形图（甜甜圈图）
@@ -1643,7 +1719,7 @@ class ChartGenerator:
         
         return fig
     
-    def _create_radar_chart(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
+    def _create_radar_chart_v2(self, data: pd.DataFrame, x_column: str, y_columns: List[str], 
                            custom_config: Dict[str, Any], colors: List[str]) -> go.Figure:
         """
         创建雷达图
