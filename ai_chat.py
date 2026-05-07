@@ -30,6 +30,7 @@ class DeepSeekChatModel:
         self.model_name = model_name or DEEPSEEK_CONFIG['default_model']
         self.temperature = DEEPSEEK_CONFIG['temperature']
         self.api_url = DEEPSEEK_CONFIG['api_url']
+        self.request_timeout = DEEPSEEK_CONFIG.get('request_timeout', 30)
     
     def call_api(self, messages: List[Dict[str, str]]) -> str:
         """
@@ -53,12 +54,19 @@ class DeepSeekChatModel:
                 "temperature": self.temperature
             }
             
-            response = requests.post(self.api_url, headers=headers, json=data)
+            response = requests.post(
+                self.api_url,
+                headers=headers,
+                json=data,
+                timeout=self.request_timeout
+            )
             response.raise_for_status()
             
             response_data = response.json()
             return response_data["choices"][0]["message"]["content"]
             
+        except requests.exceptions.Timeout:
+            return f"API调用超时（>{self.request_timeout}s），请稍后重试。"
         except requests.exceptions.RequestException as e:
             return f"API调用失败：{str(e)}"
         except KeyError as e:
@@ -98,7 +106,12 @@ class DeepSeekChatModel:
                 "max_tokens": 50
             }
             
-            response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+            response = requests.post(
+                self.api_url,
+                headers=headers,
+                json=data,
+                timeout=self.request_timeout
+            )
             response_time = time.time() - start_time
             
             if response.status_code == 200:
@@ -138,7 +151,7 @@ class DeepSeekChatModel:
             return {
                 "success": False,
                 "message": "❌ 连接超时，请检查网络连接。",
-                "response_time": 30.0
+                "response_time": float(self.request_timeout)
             }
         except requests.exceptions.ConnectionError:
             return {
@@ -310,7 +323,7 @@ class ChatProcessor:
         
         try:
             # 创建临时的DeepSeek模型实例进行测试
-            temp_model = DeepSeekChatModel(api_key.strip(), model_name)
+            temp_model = DeepSeekChatModel(api_key, model_name)
             return temp_model.test_api_connection()
         except Exception as e:
             return {
