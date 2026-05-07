@@ -26,7 +26,7 @@ try:
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    st.warning("⚠️ LangChain未安装，请运行: pip install langchain")
+    # st.warning("⚠️ LangChain未安装，请运行: pip install langchain")
 
 
 def main():
