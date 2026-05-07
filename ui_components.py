@@ -63,11 +63,11 @@ class UIComponents:
             )
             
             skip_rows = st.number_input(
-                "跳过行数",
+                "跳过数据行数（表头后）",
                 min_value=0,
                 max_value=50,
                 value=0,
-                help="从文件开头跳过的行数"
+                help="在表头确定后，从数据区开头额外跳过的行数"
             )
         
         file_params = {
@@ -119,6 +119,7 @@ class UIComponents:
         with col2:
             # 获取所有列名
             all_columns = list(data.columns)
+            auto_numeric_columns = UIComponents._detect_numeric_columns(data)
             
             # 转换为哈希值的列
             convert_hash = st.multiselect(
@@ -135,11 +136,39 @@ class UIComponents:
                 default=[],
                 help="选择要转换为数值格式的列"
             )
+
+        # 数据筛选：按 FLIGHT_PHASE 列（仅当存在该列时显示）
+        if auto_numeric_columns:
+            st.caption(f"已自动识别 {len(auto_numeric_columns)} 列可转换为数值")
+
+        selected_phases = None
+        if 'FLIGHT_PHASE' in data.columns:
+            st.markdown("### ✈️ 按飞行阶段筛选")
+            try:
+                phase_series = data['FLIGHT_PHASE'].dropna()
+                unique_phases = sorted(phase_series.astype(str).unique().tolist())
+            except Exception:
+                # 回退方案，确保即使数据类型异常也能正常显示
+                unique_phases = sorted(pd.Series(data['FLIGHT_PHASE']).dropna().astype(str).unique().tolist())
+            selected_phases = st.multiselect(
+                "选择要保留的FLIGHT_PHASE值",
+                unique_phases,
+                default=unique_phases,
+                help="支持多选。若全部不选则不进行筛选；如果上传的CSV没有FLIGHT_PHASE列，此功能不显示。"
+            )
         
         # 应用数据清洗
         cleaned_data = UIComponents._apply_data_cleaning(
             data, remove_duplicates, fill_na_method, convert_hash, convert_numeric
         )
+        
+        # 应用按 FLIGHT_PHASE 的数据筛选（在清洗完成后进行）
+        if selected_phases is not None and len(selected_phases) > 0 and 'FLIGHT_PHASE' in cleaned_data.columns:
+            try:
+                cleaned_data = cleaned_data[cleaned_data['FLIGHT_PHASE'].astype(str).isin(selected_phases)]
+            except Exception:
+                # 出现异常时不影响整体流程
+                st.warning("⚠️ 应用FLIGHT_PHASE筛选时出现问题，已跳过筛选。")
         
         return cleaned_data
     
@@ -169,7 +198,7 @@ class UIComponents:
             selected_columns = st.multiselect(
                 "选择要可视化的列",
                 numeric_columns,
-                default=numeric_columns[:min(10, len(numeric_columns))],
+                default=[],
                 help="选择要在图表中显示的数值列（建议不超过15列以保证显示效果）"
             )
         
@@ -633,6 +662,10 @@ class UIComponents:
             cleaned_data[col] = cleaned_data[col].astype(str).str.strip()
             cleaned_data[col] = cleaned_data[col].replace('', pd.NA)
             cleaned_data[col] = cleaned_data[col].replace('nan', pd.NA)
+            cleaned_data[col] = cleaned_data[col].replace('None', pd.NA)
+            cleaned_data[col] = cleaned_data[col].replace('none', pd.NA)
+            cleaned_data[col] = cleaned_data[col].replace('null', pd.NA)
+            cleaned_data[col] = cleaned_data[col].replace('NULL', pd.NA)
         
         # 移除重复行
         if remove_duplicates:
@@ -706,9 +739,31 @@ class UIComponents:
                 st.warning(f"无法将列 '{col}' 转换为哈希值")
         
         # 转换数值列
-        for col in convert_numeric:
+        auto_numeric_columns = UIComponents._detect_numeric_columns(cleaned_data)
+        for col in cleaned_data.columns:
+            if col in auto_numeric_columns or col in convert_hash:
+                continue
+
+            if cleaned_data[col].dtype not in ['object', 'string']:
+                continue
+
+            probe = cleaned_data[col].dropna().astype(str).str.strip()
+            probe = probe.replace(['', 'nan', 'None', 'none', 'null', 'NULL'], pd.NA).dropna()
+            if probe.empty:
+                continue
+
+            probe_numeric = pd.to_numeric(probe.str.replace(',', '', regex=False), errors='coerce')
+            if probe_numeric.notna().mean() >= 0.8:
+                auto_numeric_columns.append(col)
+
+        columns_to_convert = list(dict.fromkeys(convert_numeric + auto_numeric_columns))
+
+        for col in columns_to_convert:
             try:
-                cleaned_data[col] = pd.to_numeric(cleaned_data[col], errors='coerce')
+                cleaned_data[col] = pd.to_numeric(
+                    cleaned_data[col].astype(str).str.replace(',', '', regex=False),
+                    errors='coerce'
+                )
             except Exception:
                 st.warning(f"无法将列 '{col}' 转换为数值格式")
         
