@@ -58,7 +58,8 @@ def main():
             data = file_processor.process_file_with_options(
                 uploaded_file,
                 uploaded_file.name.split('.')[-1].lower(),
-                file_params['header_row']
+                file_params['header_row'],
+                file_params['skip_rows']
             )
 
             if data is not None and not data.empty:
