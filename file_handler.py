@@ -16,7 +16,7 @@ class FileProcessor:
         self.encoding_options = FILE_CONFIG['encoding_options']
         self.time_columns = TIME_COLUMN_NAMES
     
-    def detect_encoding_and_read(self, file, file_ext: str, header_row: int) -> Optional[pd.DataFrame]:
+    def detect_encoding_and_read(self, file, file_ext: str, header_row: int, skip_rows: int = 0) -> Optional[pd.DataFrame]:
         """
         检测文件编码并读取数据
         
@@ -31,14 +31,14 @@ class FileProcessor:
         file.seek(0)
         
         if file_ext == "csv":
-            return self._read_csv_with_encoding(file, header_row)
+            return self._read_csv_with_encoding(file, header_row, skip_rows)
         elif file_ext == "xlsx":
-            return self._read_excel(file, header_row)
+            return self._read_excel(file, header_row, skip_rows)
         else:
             st.error(f"不支持的文件格式：{file_ext}")
             return None
     
-    def _read_csv_with_encoding(self, file, header_row: int) -> Optional[pd.DataFrame]:
+    def _read_csv_with_encoding(self, file, header_row: int, skip_rows: int = 0) -> Optional[pd.DataFrame]:
         """
         使用多种编码尝试读取CSV文件
         
@@ -52,7 +52,14 @@ class FileProcessor:
         for encoding in self.encoding_options:
             try:
                 file.seek(0)
-                data = pd.read_csv(file, header=int(header_row), dtype='str', encoding=encoding)
+                data = pd.read_csv(
+                    file,
+                    header=int(header_row),
+                    dtype='str',
+                    encoding=encoding
+                )
+                if skip_rows > 0:
+                    data = data.iloc[int(skip_rows):].reset_index(drop=True)
                 if not data.empty and len(data.columns) > 0:
                     st.info(f"✅ 使用编码：{encoding}")
                     return data
@@ -62,7 +69,7 @@ class FileProcessor:
         st.error("CSV文件读取失败：无法使用任何编码读取文件")
         return None
     
-    def _read_excel(self, file, header_row: int) -> Optional[pd.DataFrame]:
+    def _read_excel(self, file, header_row: int, skip_rows: int = 0) -> Optional[pd.DataFrame]:
         """
         读取Excel文件
         
@@ -75,7 +82,13 @@ class FileProcessor:
         """
         try:
             file.seek(0)
-            data = pd.read_excel(file, header=int(header_row), dtype='str')
+            data = pd.read_excel(
+                file,
+                header=int(header_row),
+                dtype='str'
+            )
+            if skip_rows > 0:
+                data = data.iloc[int(skip_rows):].reset_index(drop=True)
             if data.empty or len(data.columns) == 0:
                 raise ValueError("Excel文件为空或无有效列")
             return data
@@ -136,7 +149,7 @@ class FileProcessor:
             st.error(f"设置索引列失败：{str(e)}")
             return data
     
-    def process_file_with_options(self, file, file_ext: str, header_row: int) -> Optional[pd.DataFrame]:
+    def process_file_with_options(self, file, file_ext: str, header_row: int, skip_rows: int = 0) -> Optional[pd.DataFrame]:
         """
         完整的文件处理流程，包括索引列处理
         
@@ -149,7 +162,7 @@ class FileProcessor:
             pandas.DataFrame: 处理后的数据框
         """
         # 读取数据
-        data = self.detect_encoding_and_read(file, file_ext, header_row)
+        data = self.detect_encoding_and_read(file, file_ext, header_row, skip_rows)
         
         if not self.validate_data(data):
             return None
