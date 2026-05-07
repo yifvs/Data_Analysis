@@ -7,7 +7,7 @@ import plotly.express as px
 
 # 应用程序基本配置
 APP_CONFIG = {
-    'page_title': 'Data Analysis v2.2.0',
+    'page_title': 'Data Analysis v2.2.1',
     'page_icon': '📊',
     'layout': 'wide'
 }
@@ -36,10 +36,11 @@ TIME_COLUMN_NAMES = [
 
 # DeepSeek API 配置
 DEEPSEEK_CONFIG = {
-    'api_url': 'https://api.deepseek.com/v1/chat/completions',
-    'default_model': 'deepseek-chat',
+    'api_url': 'https://api.deepseek.com/chat/completions',  # 更新为最新API URL
+    'default_model': 'deepseek-v4-flash',  # 模型名称
     'temperature': 0.7,
-    'max_tokens': 4000
+    'max_tokens': 4000,
+    'request_timeout': 30
 }
 
 # LLM 系统提示模板
