@@ -38,146 +38,146 @@ st.set_page_config(
 )
 
 # ── 现代浅色主题（干净明亮 + 圆角卡片 + 精致阴影）──
-# st.markdown("""<style>
-# @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-# * { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
+st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
 
-# .stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
-# .main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
-# .stAppDeployButton { display:none !important; }
+.stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
+.main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
+.stAppDeployButton { display:none !important; }
 
-# .css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
-# .css-154b5vr { padding:24px 16px 12px !important; }
-# .css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
-# h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
-# h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
-# p { color:#475569 !important; line-height:1.7 !important; }
+.css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
+.css-154b5vr { padding:24px 16px 12px !important; }
+.css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
+h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
+h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
+p { color:#475569 !important; line-height:1.7 !important; }
 
-# .stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
-# .stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
-# .stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
-# /* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
-# .stFileUploader span[data-testid="stMarkdownContainer"],
-# .stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
-# .stFileUploader div[data-testid="stCaptionContainer"] + div,
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
-# .stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
+.stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
+.stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
+.stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
+/* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
+.stFileUploader span[data-testid="stMarkdownContainer"],
+.stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
+.stFileUploader div[data-testid="stCaptionContainer"] + div,
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
+.stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
 
-# .stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
-# .stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
+.stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
+.stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
 
-# .stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
-# .stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
-# .stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
-# .stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
-# .stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
+.stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
+.stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
+.stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
+.stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
+.stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
 
-# .stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
-# @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-# .stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
-# .stProgress { margin-bottom:8px !important; }
-# [data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
+.stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
+.stProgress { margin-bottom:8px !important; }
+[data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
 
-# .stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
-# .stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
-# .stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
-# .stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
+.stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
+.stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
+.stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
+.stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
 
-# .stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-# .stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
-# .stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
-# .stDataFrame table tr:hover td { background:#fafbff !important; }
+.stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+.stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
+.stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
+.stDataFrame table tr:hover td { background:#fafbff !important; }
 
-# .stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-# .stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
-# .stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
+.stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
+.stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
 
-# .stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-# .stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
+.stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
 
-# .stCaption { color:#94a3b8 !important; font-size:12px !important; }
-# hr, hr + * { display:none !important; }
-# .stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
-# .stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
-# .stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-# .stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-# .stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stCaption { color:#94a3b8 !important; font-size:12px !important; }
+hr, hr + * { display:none !important; }
+.stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
+.stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
+.stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
 
-# /* 强制状态消息容器不被裁剪 */
-# div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
-# [data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
-# /* ═════════════════  云端环境 Material Icon 泄露文本修复  ═════════════════
-#    根因：云端环境 Material Icons 字体未加载，icon ligature 文本泄露为可见文字。
-#    三处泄露：① Uploader 内 "upload"  ② Expander 内 "_arrow"  ③ Sidebar 内 "keyboard_double_..."
-#    治本：引入 Google Fonts Material Icons   治标：对三处容器做核弹级隐藏 */
+/* 强制状态消息容器不被裁剪 */
+div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
+[data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
+/* ═════════════════  云端环境 Material Icon 泄露文本修复  ═════════════════
+   根因：云端环境 Material Icons 字体未加载，icon ligature 文本泄露为可见文字。
+   三处泄露：① Uploader 内 "upload"  ② Expander 内 "_arrow"  ③ Sidebar 内 "keyboard_double_..."
+   治本：引入 Google Fonts Material Icons   治标：对三处容器做核弹级隐藏 */
 
-# /* A. @import Material Icons 字体（治本：让 ligature 渲染为图标而非文本） */
-# @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-# @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
+/* A. @import Material Icons 字体（治本：让 ligature 渲染为图标而非文本） */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
 
-# /* B1. FileUploader: 核弹级隐藏内部按钮（upload 泄露源），恢复上传区域 */
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child,
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > *,
-# .stFileUploader [data-baseweb="file-uploader"] button,
-# .stFileUploader [data-baseweb="file-uploader"] button *,
-# .stFileUploader [role="button"]:not(.stFileUploaderDropContainer) {
-#   font-size: 0 !important;
-#   line-height: 0 !important;
-#   height: auto !important;
-#   min-height: 0 !important;
-#   padding: 0 !important;
-#   margin: 0 !important;
-#   overflow: hidden !important;
-#   visibility: hidden !important;
-#   display: none !important;
-# }
-# /* 但恢复上传区域本身的可见性 */
-# .stFileUploader .stFileUploaderDropContainer,
-# .stFileUploader .stFileUploaderDropContainer * {
-#   font-size: inherit !important;
-#   line-height: inherit !important;
-#   visibility: visible !important;
-#   display: block !important;
-#   overflow: visible !important;
-# }
+/* B1. FileUploader: 核弹级隐藏内部按钮（upload 泄露源），恢复上传区域 */
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child,
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child > *,
+.stFileUploader [data-baseweb="file-uploader"] button,
+.stFileUploader [data-baseweb="file-uploader"] button *,
+.stFileUploader [role="button"]:not(.stFileUploaderDropContainer) {
+  font-size: 0 !important;
+  line-height: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  display: none !important;
+}
+/* 但恢复上传区域本身的可见性 */
+.stFileUploader .stFileUploaderDropContainer,
+.stFileUploader .stFileUploaderDropContainer * {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  visibility: visible !important;
+  display: block !important;
+  overflow: visible !important;
+}
 
-# /* B2. Expander: summary 中除第一个子元素外全部隐藏（_arrow 泄露源） */
-# .stExpander > summary > :not(:first-child),
-# .stExpander > summary > :not(:first-child) * {
-#   display: none !important;
-#   font-size: 0 !important;
-#   width: 0 !important;
-#   height: 0 !important;
-#   overflow: hidden !important;
-# }
+/* B2. Expander: summary 中除第一个子元素外全部隐藏（_arrow 泄露源） */
+.stExpander > summary > :not(:first-child),
+.stExpander > summary > :not(:first-child) * {
+  display: none !important;
+  font-size: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
 
-# /* B3. Sidebar 导航：隐藏所有非首项的次要文字（keyboard_double_ 泄露源） */
-# .stSidebarNav [class*="MenuItems"] span:not(:first-child),
-# .stSidebarNav button span:not(:first-child),
-# .stSidebarNav a span:not(:first-child),
-# .stSidebarNav div[data-testid*="navitem"] span:nth-child(n+2),
-# .stSidebarNav [class*="element-container"] span:empty,
-# .stSidebarNav [class*="container"] span[aria-hidden],
-# .stApp [class*="sidebar"] svg + span,
-# .stApp [class*="sidebar"] span:has(+ svg) {
-#   display: none !important;
-#   font-size: 0 !important;
-#   width: 0 !important;
-#   overflow: hidden !important;
-# }
+/* B3. Sidebar 导航：隐藏所有非首项的次要文字（keyboard_double_ 泄露源） */
+.stSidebarNav [class*="MenuItems"] span:not(:first-child),
+.stSidebarNav button span:not(:first-child),
+.stSidebarNav a span:not(:first-child),
+.stSidebarNav div[data-testid*="navitem"] span:nth-child(n+2),
+.stSidebarNav [class*="element-container"] span:empty,
+.stSidebarNav [class*="container"] span[aria-hidden],
+.stApp [class*="sidebar"] svg + span,
+.stApp [class*="sidebar"] span:has(+ svg) {
+  display: none !important;
+  font-size: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
 
-# /* B4. 全局兜底：所有含 aria-hidden 或空内容的可疑 span */
-# .stApp span[aria-hidden="true"],
-# .stApp span:empty:not([data-testid]),
-# button span[aria-hidden],
-# label span[aria-hidden] {
-#   display: none !important;
-#   font-size: 0 !important;
-# }
-# </style>""", unsafe_allow_html=True)
+/* B4. 全局兜底：所有含 aria-hidden 或空内容的可疑 span */
+.stApp span[aria-hidden="true"],
+.stApp span:empty:not([data-testid]),
+button span[aria-hidden],
+label span[aria-hidden] {
+  display: none !important;
+  font-size: 0 !important;
+}
+</style>""", unsafe_allow_html=True)
 
 
 # 初始化 session_state
@@ -198,8 +198,38 @@ def decode_wav(buffer_bytes: bytes) -> tuple[np.ndarray, int]:
     return data, sr
 
 
+def _decode_via_ffmpeg(file_bytes: bytes) -> tuple[np.ndarray, int] | None:
+    """使用 ffmpeg 子进程解码音频（支持 MP4 等容器格式）"""
+    import subprocess
+    import tempfile
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".input", delete=False) as tmp_in:
+            tmp_in.write(file_bytes)
+            tmp_in_path = tmp_in.name
+        cmd = [
+            "ffmpeg", "-i", tmp_in_path,
+            "-vn",               # 忽略视频轨
+            "-ac", "1",          # 单声道
+            "-ar", "44100",      # 采样率
+            "-f", "f32le",       # 32-bit float PCM
+            "-acodec", "pcm_f32le",
+            "pipe:1",            # 输出到 stdout
+        ]
+        result = subprocess.run(cmd, capture_output=True, timeout=30)
+        os.unlink(tmp_in_path)
+        if result.returncode != 0 or len(result.stdout) < 4:
+            return None
+        samples = np.frombuffer(result.stdout, dtype=np.float32)
+        return samples, 44100
+    except FileNotFoundError:
+        # ffmpeg 未安装
+        return None
+    except Exception:
+        return None
+
+
 def try_decode_audio(file_bytes: bytes, filename: str) -> tuple[np.ndarray, int]:
-    """尝试解码音频文件，优先 WAV，其他格式用 soundfile 兜底"""
+    """尝试解码音频文件，优先 WAV → soundfile → ffmpeg，最终模拟兜底"""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     try:
         if ext == "wav":
@@ -212,6 +242,10 @@ def try_decode_audio(file_bytes: bytes, filename: str) -> tuple[np.ndarray, int]
             return data, sr
     except Exception:
         pass
+    # soundfile 失败时，尝试 ffmpeg 解码（支持 MP4 等容器格式）
+    ffmpeg_result = _decode_via_ffmpeg(file_bytes)
+    if ffmpeg_result is not None:
+        return ffmpeg_result
     # 最终兜底：生成模拟数据
     print(f"[警告] 无法解码 {filename}，使用模拟信号演示")
     duration = min(5.0, len(file_bytes) * 2 / 44100)
@@ -699,6 +733,9 @@ def generate_ai_analysis(
 
     prompt = f"""你是一位资深的声学与振动分析专家。请根据以下音频频谱分析数据，提供专业、详细的智能分析报告。
 
+当前日期: {datetime.now().strftime("%Y年%m月%d日")}
+注意：报告中如需填写日期，请使用当前日期，不要编造日期。
+
 ## 音频基本信息
 - 文件名: {file_name}
 - 采样率: {sample_rate} Hz
@@ -1080,7 +1117,7 @@ def main():
 2. 点击「开始分析」按钮<br/>
 3. 查看图表与诊断结果<br/>
 4. 下载完整 HTML 报告<br/><br/>
-<b>支持格式:</b> WAV / MP3 / OGG / FLAC / AAC / M4A<br/>
+<b>支持格式:</b> WAV / MP3 / OGG / FLAC / AAC / M4A / MP4<br/>
 <b>文件大小:</b> 最大 50 MB
 </div></details>""", unsafe_allow_html=True)
 
@@ -1099,14 +1136,12 @@ def main():
     # ════════════════════ 文件上传区 ════════════════════
     uploaded_file = st.file_uploader(
         "**拖拽或点击上传**",
-        type=["wav", "mp3", "ogg", "flac", "aac", "m4a"],
-        help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A，最大 50MB",
+        type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
+        help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A / MP4，最大 50MB",
     )
 
     # 操作按钮行
     c_left, c_right = st.columns([1.2, 3])
-    analyze_clicked = False
-    download_clicked = False
 
     with c_left:
         analyze_clicked = st.button(
@@ -1117,11 +1152,29 @@ def main():
         )
 
     with c_right:
-        download_clicked = st.button(
-            "⬇  导出 HTML 报告",
-            use_container_width=True,
-            disabled=not st.session_state.analysis_result,
-        )
+        _has_result = bool(st.session_state.analysis_result)
+        # 预生成报告内容（点击时才生成，避免每次 rerun 都计算）
+        if _has_result:
+            result = st.session_state.analysis_result
+            if not result.get("report_html"):
+                with st.spinner("正在生成 HTML 报告..."):
+                    result["report_html"] = generate_report_html(result)
+            safe_name = (
+                re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(result["file_name"]).stem)
+                + "_音频分析报告_"
+                + datetime.now().strftime("%Y%m%d_%H%M%S")
+                + ".html"
+            )
+            st.download_button(
+                label="⬇  导出 HTML 报告",
+                data=result["report_html"].encode("utf-8"),
+                file_name=safe_name,
+                mime="text/html;charset=utf-8",
+                use_container_width=True,
+                type="primary",
+            )
+        else:
+            st.button("⬇  导出 HTML 报告", disabled=True, use_container_width=True)
 
     # ── 执行分析 ──
     if analyze_clicked and uploaded_file:
@@ -1154,27 +1207,6 @@ def main():
         except Exception as e:
             status.error(f"❌ 分析失败: {e}")
             st.exception(e)
-
-    # ── 下载按钮（按需生成报告，避免 kaleido 阻塞主流程）──
-    if download_clicked and st.session_state.analysis_result:
-        result = st.session_state.analysis_result
-        with st.spinner("正在生成 HTML 报告..."):
-            html_content = result.get("report_html") or generate_report_html(result)
-            result["report_html"] = html_content  # 缓存起来避免重复生成
-        safe_name = (
-            re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(result["file_name"]).stem)
-            + "_音频分析报告_"
-            + datetime.now().strftime("%Y%m%d_%H%M%S")
-            + ".html"
-        )
-        st.download_button(
-            label="📄 点击下载报告文件",
-            data=html_content.encode("utf-8"),
-            file_name=safe_name,
-            mime="text/html;charset=utf-8",
-            use_container_width=True,
-            type="primary",
-        )
 
     # ── 结果展示区 ──
     result = st.session_state.analysis_result
