@@ -669,22 +669,32 @@ def compute_harmonic_peaks(
     # 因此能有效过滤风噪/啸叫造成的虚假宽峰，只保留真正突出的窄峰。
     from scipy.signal import find_peaks as scipy_find_peaks
 
-    # prominence 的绝对阈值：功率谱最大值的 min_prominence 比例
     max_power = np.max(power) + 1e-10
-    prom_threshold = min_prominence * max_power
 
+    # 先用宽松阈值找所有候选峰，再按相对 prominence 过滤
+    # 这样可以避免绝对阈值因跨平台浮点微差导致边缘峰"过/不过"翻转
+    min_freq_res = freqs[1] - freqs[0] + 1e-10
     peak_indices, peak_props = scipy_find_peaks(
         power,
-        prominence=prom_threshold,
-        distance=max(1, int(5 / (freqs[1] - freqs[0] + 1e-10))),  # 最小间距 ~5Hz
+        prominence=0,  # 先接受所有峰
+        distance=max(1, int(5 / min_freq_res)),  # 最小间距 ~5Hz
     )
 
     if len(peak_indices) == 0:
         return []
 
-    # 按 prominence 降序排序取前 N 个——最显著的峰最有特征价值
+    # 用相对 prominence 过滤：只保留 prominence ≥ 最大 prominence 的 min_prominence 比例
     prominences = peak_props["prominences"]
-    sorted_order = np.argsort(prominences)[::-1][:n_peaks]
+    prom_threshold = min_prominence * np.max(prominences)
+    valid_mask = prominences >= prom_threshold
+    peak_indices = peak_indices[valid_mask]
+    prominences = prominences[valid_mask]
+
+    if len(peak_indices) == 0:
+        return []
+
+    # 按 prominence 降序排序取前 N 个——最显著的峰最有特征价值
+    sorted_order = np.argsort(prominences, kind='stable')[::-1][:n_peaks]
 
     peaks = []
     for order_idx in sorted_order:
@@ -896,9 +906,22 @@ def remove_speech_band(samples: np.ndarray, sample_rate: int) -> np.ndarray:
         frame_rms_speech[i] = np.sqrt(np.mean(speech_band[start:end] ** 2)) + 1e-10
 
     # 语音活动判定：语音频带能量占全频带能量比例超过阈值
+    # 注意：加入滞后区间（hysteresis）避免阈值边界帧在不同平台间翻转，
+    # 导致 VAD 丢弃不同帧 → 后续所有特征级联差异
     speech_ratio = frame_rms_speech / frame_rms_full
-    threshold = max(float(np.median(speech_ratio)) * 1.5, 0.35)
-    is_speech = speech_ratio > threshold
+    threshold_high = max(float(np.median(speech_ratio)) * 1.5, 0.35)
+    threshold_low = threshold_high * 0.85  # 滞后下限
+    is_speech = np.zeros(n_frames, dtype=bool)
+    for i in range(n_frames):
+        if speech_ratio[i] > threshold_high:
+            is_speech[i] = True
+        elif speech_ratio[i] < threshold_low:
+            is_speech[i] = False
+        # 在 [threshold_low, threshold_high] 滞后区间内的帧保持前一个状态
+        elif i > 0:
+            is_speech[i] = is_speech[i - 1]
+        else:
+            is_speech[i] = False
 
     # 如果没有检测到语音帧，直接返回原信号
     if not np.any(is_speech):
@@ -1326,16 +1349,17 @@ def _compute_topk_anomaly_similarity(
         """取三种指标 Top-K 帧的 dB 频谱，求均值"""
         selected_indices = set()
 
-        # RMS Top-K
-        top_rms = np.argsort(rms)[-k:]
+        # 使用 stable 排序避免并列帧在不同平台选到不同帧
+        # argsort 默认不保证并列顺序，kind='stable' 保持原始索引序
+        top_rms = np.argsort(rms, kind='stable')[-k:]
         selected_indices.update(top_rms)
 
         # 谱峭度 Top-K
-        top_kurt = np.argsort(kurtosis)[-k:]
+        top_kurt = np.argsort(kurtosis, kind='stable')[-k:]
         selected_indices.update(top_kurt)
 
         # 高频能量比 Top-K
-        top_hf = np.argsort(hf_ratio)[-k:]
+        top_hf = np.argsort(hf_ratio, kind='stable')[-k:]
         selected_indices.update(top_hf)
 
         # 拼接所有选中帧的 dB 频谱
