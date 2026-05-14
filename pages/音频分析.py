@@ -2135,9 +2135,22 @@ def main():
                 samples_b, sr_b = try_decode_audio(bytes_b, name_b)
 
                 comp = compute_audio_similarity(samples_a, sr_a, samples_b, sr_b, filter_speech=filter_speech)
+                # 保存到 session_state，供导出报告使用
+                st.session_state.comparison_result = comp
+                st.session_state.comparison_name_a = name_a
+                st.session_state.comparison_name_b = name_b
+                st.session_state.comp_report_html = None  # 清除旧报告缓存
                 render_comparison(comp, name_a, name_b)
             except Exception as e:
                 st.error(f"❌ 比对失败: {e}")
+
+    # ── 恢复上次比对结果（页面 rerun 时） ──
+    if st.session_state.get("comparison_result") and not compare_clicked:
+        render_comparison(
+            st.session_state.comparison_result,
+            st.session_state.get("comparison_name_a", ""),
+            st.session_state.get("comparison_name_b", ""),
+        )
 
 
 def render_results(result: dict):
@@ -2343,6 +2356,267 @@ def render_results(result: dict):
 # ──────────────────────── 音频比对 UI ────────────────────────
 
 
+def generate_comparison_report_html(comp: dict, name_a: str, name_b: str) -> str:
+    """生成音频噪声指纹比对 HTML 报告（内嵌 Plotly 交互式图表，离线可打开）"""
+
+    def fig_to_html_div(fig) -> str:
+        """将 Plotly Figure 转为独立 HTML div（含 Plotly.js CDN）"""
+        try:
+            return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"displayModeBar": True})
+        except Exception:
+            return "<p style='color:#94a3b8;text-align:center;padding:20px;'>图表渲染失败</p>"
+
+    overall = comp["overall_similarity"]
+    if overall >= 75:
+        color, bg, icon = "#059669", "#ecfdf5", "✅"
+    elif overall >= 55:
+        color, bg, icon = "#2563eb", "#eff6ff", "🔵"
+    elif overall >= 35:
+        color, bg, icon = "#d97706", "#fffbeb", "🟡"
+    else:
+        color, bg, icon = "#dc2626", "#fef2f2", "🔴"
+
+    # 生成图表
+    fig_radar = plot_similarity_radar(comp)
+    fig_lfcc_a = plot_lfcc_heatmap(comp["lfcc_a"], comp["target_sr"], f"LFCC — {name_a[:18]}")
+    fig_lfcc_b = plot_lfcc_heatmap(comp["lfcc_b"], comp["target_sr"], f"LFCC — {name_b[:18]}")
+    fig_overlay = plot_spectrum_overlay(comp["sig_a"], comp["sig_b"], name_a, name_b)
+    fig_bands = plot_band_energy_comparison(comp["sig_a"], comp["sig_b"], name_a, name_b)
+
+    radar_html = fig_to_html_div(fig_radar)
+    lfcc_a_html = fig_to_html_div(fig_lfcc_a)
+    lfcc_b_html = fig_to_html_div(fig_lfcc_b)
+    overlay_html = fig_to_html_div(fig_overlay)
+    bands_html = fig_to_html_div(fig_bands)
+
+    # 谐波峰表格
+    def peaks_table_rows(peaks, max_n=8):
+        rows = []
+        for i, p in enumerate(peaks[:max_n]):
+            rows.append(f"""<tr>
+                <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-weight:600">{i+1}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#1e293b">{p['freq']:.1f} Hz</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">{p['magnitude']*100:.1f}%</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b">{p['label']}</td>
+            </tr>""")
+        return "\n".join(rows) if rows else '<tr><td colspan="4" style="padding:16px;text-align:center;color:#94a3b8;">未检测到明显谐波峰</td></tr>'
+
+    sig_a, sig_b = comp["sig_a"], comp["sig_b"]
+    peaks_a = sig_a.get("harmonic_peaks", [])
+    peaks_b = sig_b.get("harmonic_peaks", [])
+    ratios_a = sig_a.get("harmonic_ratios", [])
+    ratios_b = sig_b.get("harmonic_ratios", [])
+
+    # 子带能量对比表
+    band_names = [
+        "0-50Hz 超低频", "50-100Hz 低频A", "100-200Hz 低频B", "200-500Hz 中低频",
+        "500-1kHz 中频A", "1k-2kHz 中频B", "2k-3kHz 语音区", "3k-5kHz 中高频",
+        "5k-8kHz 高频", "8k+ 超高频",
+    ]
+    be_a = sig_a.get("band_energies", [])
+    be_b = sig_b.get("band_energies", [])
+
+    band_rows = []
+    for i, bn in enumerate(band_names):
+        va = f"{be_a[i]*100:.1f}%" if i < len(be_a) else "—"
+        vb = f"{be_b[i]*100:.1f}%" if i < len(be_b) else "—"
+        band_rows.append(f"""<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-weight:500">{bn}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;text-align:center">{va}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;text-align:center">{vb}</td>
+        </tr>""")
+    band_table_rows = "\n".join(band_rows)
+
+    # 标量特征对比
+    scalar_features = [
+        ("频谱质心", sig_a.get("centroid", 0), sig_b.get("centroid", 0), "Hz"),
+        ("频谱带宽", sig_a.get("bandwidth", 0), sig_b.get("bandwidth", 0), "Hz"),
+        ("频谱平坦度", sig_a.get("flatness", 0), sig_b.get("flatness", 0), ""),
+    ]
+    scalar_rows = []
+    for label, va, vb, unit in scalar_features:
+        u = f" {unit}" if unit else ""
+        scalar_rows.append(f"""<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-weight:500">{label}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;text-align:center">{va:.1f}{u}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;text-align:center">{vb:.1f}{u}</td>
+        </tr>""")
+    scalar_table_rows = "\n".join(scalar_rows)
+
+    speech_filter_note = ""
+    if comp.get("filter_speech"):
+        speech_filter_note = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin:12px 0;color:#1e40af;font-size:13px;">🔊 已启用语音频带过滤（300-3400Hz），比对结果排除了人声干扰，专注于机械噪声特征。</div>'
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音频噪声指纹比对报告 - {name_a} vs {name_b}</title>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#f8fafc; color:#1e293b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.6; padding:24px; max-width:920px; margin:0 auto; }}
+h1 {{ font-size:26px; color:#0f172a; margin-bottom:6px; letter-spacing:-0.5px; }}
+h2 {{ font-size:17px; color:#4f46e5; margin:28px 0 14px; border-left:3px solid #4f46e5; padding-left:14px; }}
+.meta {{ color:#64748b; font-size:13px; margin-bottom:24px; padding:8px 0; border-bottom:1px solid #e2e8f0; }}
+.card {{ background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:22px; margin-bottom:18px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }}
+.score-big {{ font-size:56px; font-weight:800; letter-spacing:-3px; line-height:1; }}
+.grade {{ font-size:24px; font-weight:700; }}
+.stat-grid {{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; margin-top:18px; }}
+.stat-item {{ background:#f8fafc; padding:16px; border-radius:10px; text-align:center; border:1px solid #f1f5f9; }}
+.stat-label {{ font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }}
+.stat-value {{ font-size:20px; color:#0f172a; font-weight:700; }}
+.chart-img {{ width:100%; border-radius:10px; display:block; }}
+table {{ width:100%; border-collapse:collapse; }}
+th {{ padding:12px 14px; text-align:left; border-bottom:2px solid #e2e8f0; color:#64748b; font-size:13px; font-weight:600; background:#f8fafc; }}
+td {{ padding:10px 14px; border-bottom:1px solid #f1f5f9; }}
+.footer {{ text-align:center; color:#94a3b8; font-size:12px; margin-top:36px; padding-top:18px; border-top:1px solid #e2e8f0; }}
+.two-col {{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }}
+.tip {{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-top:12px; color:#475569; font-size:13px; line-height:1.7; }}
+</style>
+</head>
+<body>
+<h1>🔗 音频噪声指纹比对报告</h1>
+<div class="meta">
+    📁 音频 A: {name_a}（时长 {comp['duration_a']:.2f}s）&nbsp;|&nbsp;
+    📁 音频 B: {name_b}（时长 {comp['duration_b']:.2f}s）&nbsp;|&nbsp;
+    📅 {now_str}
+</div>
+
+{speech_filter_note}
+
+<div class="card" style="background:{bg};border-color:{color}30;">
+<h2 style="color:{color};border-color:{color};">🎯 比对结论</h2>
+<div style="text-align:center;padding:18px 0;">
+    <div class="score-big" style="color:{color};">{overall}<span style="font-size:28px;font-weight:600;color:#94a3b8;">%</span></div>
+    <div class="grade" style="color:{color};margin-top:8px;">{icon} {comp['conclusion']}</div>
+    <div style="color:#475569;font-size:14px;margin-top:10px;max-width:560px;margin-left:auto;margin-right:auto;">{comp['conclusion_detail']}</div>
+</div>
+</div>
+
+<div class="card">
+<h2>📊 特征相似度得分</h2>
+<div class="stat-grid">
+    <div class="stat-item">
+        <div class="stat-label">LFCC 相似度</div>
+        <div class="stat-value">{comp['lfcc_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 20%</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">频谱特征</div>
+        <div class="stat-value">{comp['spectral_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 25%</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">频谱形状</div>
+        <div class="stat-value">{comp['spectrum_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 25%</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">谐波指纹</div>
+        <div class="stat-value" style="color:{color};">{comp['harmonic_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 30%（核心）</div>
+    </div>
+</div>
+<div class="tip">
+<b>📖 四项指标通俗解读：</b><br>
+🔸 <b>LFCC 相似度</b>：像"逐段对比两首歌的频谱截图"——每帧切一小段，看各频率子带能量分布像不像。全频段等权重，不偏向人声。<br>
+🔸 <b>频谱特征</b>：像"比较两个人的身高、体重、BMI"——不看细节，只比对几个整体统计量（能量重心在哪、频率分布有多宽/多平）。<br>
+🔸 <b>频谱形状</b>：像"比较两张剪影的轮廓"——忽略谁响谁轻，只看频率分布的"形状"像不像。<br>
+🔸 <b>谐波指纹</b>：权重最高（30%）。像"DNA 条形码比对"——每台设备有独特的特征频率组合，不管录音条件怎么变，比例不变。
+</div>
+</div>
+
+<div class="card">
+<h2>🎯 相似度雷达图</h2>
+{radar_html}
+<div class="tip"><b>💡 阅读方法：</b>五个轴代表五个比对维度，蓝色多边形越"大"越"圆"→ 两段音频越相似。谐波指纹轴突出说明特征频率匹配好。</div>
+</div>
+
+<div class="card">
+<h2>📊 LFCC 对比热力图</h2>
+<div class="two-col">
+    <div>
+        <h3 style="font-size:14px;color:#475569;margin-bottom:8px;">音频 A — {name_a[:20]}</h3>
+        {lfcc_a_html}
+    </div>
+    <div>
+        <h3 style="font-size:14px;color:#475569;margin-bottom:8px;">音频 B — {name_b[:20]}</h3>
+        {lfcc_b_html}
+    </div>
+</div>
+<div class="tip"><b>💡 阅读方法：</b>纵轴=13个频率系数，横轴=时间帧，颜色=系数值。两图颜色分布越像 → LFCC 相似度越高。与 MFCC 不同：LFCC 用线性频率间隔，不会忽略高频机械特征。</div>
+</div>
+
+<div class="card">
+<h2>🎚️ 频谱叠加对比</h2>
+{overlay_html}
+<div class="tip"><b>💡 阅读方法：</b>两条曲线越重合 → 频率分布越相似。峰值位置对齐说明特征频率一致；曲线高度不同但形状相似仅表示音量差异。</div>
+</div>
+
+<div class="card">
+<h2>📈 子带能量分布对比</h2>
+{bands_html}
+<div class="tip"><b>💡 阅读方法：</b>10个频段的能量占比对比。低频细分便于识别机械噪声特征。同组柱高接近 → 该频段相似；差距大 → 有显著差异。</div>
+</div>
+
+<div class="card">
+<h2>📋 子带能量明细</h2>
+<table>
+<thead><tr><th>频段</th><th style="text-align:center;">音频 A</th><th style="text-align:center;">音频 B</th></tr></thead>
+<tbody>{band_table_rows}</tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>📏 频谱标量特征对比</h2>
+<table>
+<thead><tr><th>特征</th><th style="text-align:center;">音频 A</th><th style="text-align:center;">音频 B</th></tr></thead>
+<tbody>{scalar_table_rows}</tbody>
+</table>
+<div class="tip">
+<b>📖 特征含义：</b><br>
+• <b>频谱质心</b>：功率谱的"重心"频率。越高→高频能量越强→噪声越"尖锐"<br>
+• <b>频谱带宽</b>：能量围绕质心的分散程度。越大→频率成分越丰富<br>
+• <b>频谱平坦度</b>：几何均值/算术均值。≈1→白噪声（平坦）；≪1→有明显峰值（周期性）
+</div>
+</div>
+
+<div class="card">
+<h2>🎵 谐波峰详情</h2>
+<div class="two-col">
+    <div>
+        <h3 style="font-size:14px;color:#475569;margin-bottom:8px;">音频 A — {name_a[:20]}</h3>
+        <table>
+        <thead><tr><th>#</th><th>频率</th><th>相对幅度</th><th>频段</th></tr></thead>
+        <tbody>{peaks_table_rows(peaks_a)}</tbody>
+        </table>
+        {f'<div style="margin-top:8px;color:#64748b;font-size:12px;">谐波比: {", ".join(f"{r}×" for r in ratios_a[:5])}</div>' if ratios_a else ''}
+    </div>
+    <div>
+        <h3 style="font-size:14px;color:#475569;margin-bottom:8px;">音频 B — {name_b[:20]}</h3>
+        <table>
+        <thead><tr><th>#</th><th>频率</th><th>相对幅度</th><th>频段</th></tr></thead>
+        <tbody>{peaks_table_rows(peaks_b)}</tbody>
+        </table>
+        {f'<div style="margin-top:8px;color:#64748b;font-size:12px;">谐波比: {", ".join(f"{r}×" for r in ratios_b[:5])}</div>' if ratios_b else ''}
+    </div>
+</div>
+<div class="tip">
+<b>📖 谐波峰解读：</b>频谱中的"尖峰"是设备的独有特征频率，就像指纹的纹路。<br>
+• 同一设备在不同时间录制，特征频率位置基本不变<br>
+• "频段"标识了该频率可能对应的物理来源（电机/齿轮/轴承等）<br>
+• <b>谐波比</b>：基频与各谐波峰的频率比。同一设备的谐波比稳定（由物理结构决定），即使录音条件变化也不受影响
+</div>
+</div>
+
+<div class="footer">音频噪声指纹比对系统 | 报告生成时间 {now_str}</div>
+</body>
+</html>"""
+
+
 def render_comparison(comp: dict, name_a: str, name_b: str):
     """渲染音频比对结果"""
 
@@ -2510,6 +2784,38 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
 • 能量"重心"偏左 → 低频为主（大质量振动）；偏右 → 高频为主（小部件/气蚀）
 </div>
         """, unsafe_allow_html=True)
+
+    # ── 导出 HTML 报告 ──
+    st.markdown("---")
+    comp_key = "comp_report_html"
+    if comp_key not in st.session_state:
+        st.session_state[comp_key] = None
+
+    _has_comp = bool(st.session_state.get("comparison_result"))
+    if _has_comp:
+        _comp = st.session_state.comparison_result
+        _name_a = st.session_state.get("comparison_name_a", "")
+        _name_b = st.session_state.get("comparison_name_b", "")
+        if not st.session_state[comp_key]:
+            with st.spinner("正在生成比对 HTML 报告..."):
+                st.session_state[comp_key] = generate_comparison_report_html(_comp, _name_a, _name_b)
+        safe_name_a = re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(_name_a).stem)
+        safe_name_b = re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(_name_b).stem)
+        report_filename = (
+            f"{safe_name_a}_vs_{safe_name_b}_噪声指纹比对_"
+            + datetime.now().strftime("%Y%m%d_%H%M%S")
+            + ".html"
+        )
+        st.download_button(
+            label="⬇  导出比对 HTML 报告",
+            data=st.session_state[comp_key].encode("utf-8"),
+            file_name=report_filename,
+            mime="text/html;charset=utf-8",
+            use_container_width=True,
+            type="primary",
+        )
+    else:
+        st.button("⬇  导出比对 HTML 报告", disabled=True, use_container_width=True)
 
 
 
