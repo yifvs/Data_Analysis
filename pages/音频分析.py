@@ -24,7 +24,7 @@ import soundfile as sf
 import streamlit as st
 import plotly.graph_objects as go
 from scipy.signal import get_window, stft as scipy_stft
-from scipy.fft import fft, fftfreq, ifft
+from scipy.fft import fft, fftfreq
 
 warnings.filterwarnings("ignore")
 
@@ -46,9 +46,7 @@ st.set_page_config(
 # .main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
 # .stAppDeployButton { display:none !important; }
 
-# .css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
-# .css-154b5vr { padding:24px 16px 12px !important; }
-# .css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
+# [data-testid="stSidebar"] { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
 # h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
 # h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
 # p { color:#475569 !important; line-height:1.7 !important; }
@@ -56,7 +54,7 @@ st.set_page_config(
 # .stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
 # .stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
 # .stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
-# /* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
+# /* 隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
 # .stFileUploader span[data-testid="stMarkdownContainer"],
 # .stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
 # .stFileUploader div[data-testid="stCaptionContainer"] + div,
@@ -161,7 +159,7 @@ def _decode_via_ffmpeg(file_bytes: bytes) -> tuple[np.ndarray, int] | None:
 
 
 def try_decode_audio(file_bytes: bytes, filename: str) -> tuple[np.ndarray, int]:
-    """尝试解码音频文件，优先 WAV → soundfile → ffmpeg，最终模拟兜底"""
+    """尝试解码音频文件，优先 WAV → soundfile → ffmpeg，失败则抛出异常"""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     try:
         if ext == "wav":
@@ -178,19 +176,12 @@ def try_decode_audio(file_bytes: bytes, filename: str) -> tuple[np.ndarray, int]
     ffmpeg_result = _decode_via_ffmpeg(file_bytes)
     if ffmpeg_result is not None:
         return ffmpeg_result
-    # 最终兜底：生成模拟数据
-    print(f"[警告] 无法解码 {filename}，使用模拟信号演示")
-    duration = min(5.0, len(file_bytes) * 2 / 44100)
-    t = np.linspace(0, duration, int(44100 * duration), endpoint=False)
-    signal = (
-        0.3 * np.sin(2 * np.pi * 440 * t)
-        + 0.15 * np.sin(2 * np.pi * 880 * t)
-        + 0.08 * np.sin(2 * np.pi * 1320 * t)
-        + 0.05 * np.sin(2 * np.pi * 2200 * t)
-        + 0.02 * (np.random.random(len(t)) - 0.5)
-        + 0.1 * np.sin(2 * np.pi * 120 * t)
+    # 所有解码方式均失败，直接报错而非生成模拟数据
+    raise ValueError(
+        f"无法解码音频文件 '{filename}'。"
+        f"请确认文件格式有效且未损坏。支持格式：WAV/MP3/OGG/FLAC/AAC/M4A/MP4。"
+        f"如为视频格式，建议先转换为 WAV 后再上传。"
     )
-    return signal.astype(np.float32), 44100
 
 
 # ──────────────────────── DSP 核心算法 ────────────────────────
@@ -218,20 +209,40 @@ def next_power_of_2(n: int) -> int:
 
 def perform_fft_analysis(
     samples: np.ndarray, sample_rate: int
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, np.ndarray, int]:
     """
-    执行 FFT 频谱分析
-    返回: (magnitudes, fft_size)
+    执行 FFT 频谱分析（Welch 法：全量信号分段平均功率谱）
+
+    不再只截取开头零点几秒，而是将整段音频分成多个重叠段，
+    对每段做加窗 FFT 后取平均，得到统计上更稳定的功率谱估计。
+    这就是 Welch 法的核心思想——用空间换精度，用平均换稳定。
+
+    返回: (magnitudes, freqs, fft_size)
     """
     fft_size = next_power_of_2(min(len(samples), 8192))
-    segment = samples[:fft_size].astype(np.float64)
-    # 窗函数减少频谱泄漏
+    hop_size = fft_size // 2  # 50% 重叠
     window = get_window("hann", fft_size)
-    windowed = segment * window
-    spectrum = fft(windowed)
-    n_half = fft_size // 2
-    magnitudes = np.abs(spectrum[:n_half]) / fft_size
-    freqs = fftfreq(fft_size, d=1.0 / sample_rate)[:n_half]
+
+    # 计算可以切出多少个完整段
+    n_segments = max(1, (len(samples) - fft_size) // hop_size + 1)
+
+    # 累加各段功率谱
+    avg_power = np.zeros(fft_size // 2)
+    for i in range(n_segments):
+        start = i * hop_size
+        segment = samples[start:start + fft_size].astype(np.float64)
+        if len(segment) < fft_size:
+            segment = np.pad(segment, (0, fft_size - len(segment)))
+        windowed = segment * window
+        spectrum = fft(windowed)
+        avg_power += np.abs(spectrum[:fft_size // 2]) ** 2
+
+    # 归一化：除以段数和窗函数修正因子
+    window_correction = np.sum(window ** 2)
+    avg_power /= (n_segments * window_correction * sample_rate)
+    magnitudes = np.sqrt(avg_power)  # 幅度谱 = 功率谱的平方根
+
+    freqs = fftfreq(fft_size, d=1.0 / sample_rate)[:fft_size // 2]
     return magnitudes, freqs, fft_size
 
 
@@ -298,6 +309,7 @@ def detect_defects(
     freqs: np.ndarray,
     peaks: list[dict],
     rms_level: float,
+    peak_level: float,
     fft_size: int,
     sample_rate: int,
 ) -> list[dict[str, Any]]:
@@ -384,8 +396,10 @@ def detect_defects(
             "frequency": low_freq_end * freq_resolution,
         })
 
-    # 4. 削波检测
-    if rms_level > -3:
+    # 4. 削波检测（使用峰值电平而非 RMS）
+    # 满量程纯正弦波的 RMS = -3.01 dBFS，方波 RMS 可达 0 dBFS，
+    # 因此 RMS 无法可靠检测削波。应看峰值电平是否逼近 0 dBFS。
+    if peak_level >= -0.1:
         defects.append({
             "type": "信号削波",
             "description": (
@@ -478,14 +492,15 @@ def get_quality_grade(score: int) -> str:
 #   处产生能量峰值——这就是这台电机的"指纹"。不同设备的指纹不同。
 #   如果两段音频在相同频率处有相似的峰值结构，它们大概率来自同类声源。
 #
-# ● 本模块的比对流程（4 个维度）：
+# ● 本模块的比对流程（5 个维度）：
 #   ┌─────────────┬────────────────────────────────────────────┬──────┐
 #   │  维度        │  含义                                      │ 权重 │
 #   ├─────────────┼────────────────────────────────────────────┼──────┤
-#   │  LFCC       │  线性频率倒谱系数：全频段等权重的"音色指纹"  │ 20%  │
-#   │  频谱特征   │  子带能量+质心+带宽+平坦度：整体能量分布     │ 25%  │
-#   │  频谱形状   │  归一化频谱曲线的相似度：频率分布的形态匹配  │ 25%  │
-#   │  谐波指纹   │  特征频率峰+谐波比：机械噪声最核心的识别指标 │ 30%  │
+#   │  LFCC       │  增强统计分布：均值+分位数+协方差+Wasserstein│ 15%  │
+#   │  频谱特征   │  子带能量+质心+带宽+平坦度：整体能量分布     │ 20%  │
+#   │  峰结构     │  抗漂移峰间距比+倍频关系：频率偏移鲁棒       │ 20%  │
+#   │  谐波指纹   │  特征频率峰+谐波比：机械噪声最核心的识别指标 │ 25%  │
+#   │  包络谱     │  Hilbert包络频谱：幅度调制节奏指纹           │ 20%  │
 #   └─────────────┴────────────────────────────────────────────┴──────┘
 #
 # ● MFCC vs LFCC——为什么用 LFCC？
@@ -514,6 +529,13 @@ def compute_lfcc(
     - LFCC 的"三棱镜"全频段等间距，每个频率区间都有相同的分辨率
     → 电机振动（25-200Hz）、轴承异响（3-8kHz）在 LFCC 中都能被精确捕获
 
+    【PCEN 增强】
+    传统 LFCC 用 np.log(filter_output) 取对数，这只能压缩动态范围，
+    无法补偿手机麦克风近场/远场导致的频谱倾斜（EQ 频响差异）。
+    PCEN 对每个频率通道做指数移动平均归一化：
+      PCEN(t,f) = (S(t,f) / (ε + M(t,f)))^α - δ)^r
+    让同一设备在 1m 和 3m 处录到的频谱形状更一致。
+
     参数说明：
     - n_lfcc: 输出多少维系数。13维是常用值，前几维代表频谱包络（整体能量分布），
       后几维代表精细结构（谐波纹理）。维度越多描述越精细，但也越容易受噪声干扰。
@@ -525,86 +547,85 @@ def compute_lfcc(
     - 列: 按时间顺序的帧（每帧约 23ms，帧间重叠 50%）
     """
     # ── 预加重 ──
-    # 对信号做一阶差分滤波：y[n] = x[n] - α·x[n-1]
-    # 作用：适度提升高频成分。语音处理通常用 α=0.97（大幅提升高频），
-    # 但机械噪声低频能量丰富，用 α=0.5 只做轻微提升，避免压低低频信息。
     pre_emphasis = 0.5
     emphasized = np.append(samples[0], samples[1:] - pre_emphasis * samples[:-1])
 
     # ── 分帧 ──
-    # 声音信号随时间变化，需要切成短帧（每帧内近似稳定）。
-    # frame_len = n_fft = 2048 点 ≈ 46ms @44100Hz
-    # hop_len = 1024 点（50% 重叠），相邻帧共享一半数据，保证时间连续性
     frame_len = n_fft
     hop_len = frame_len // 2
     n_frames = max(1, 1 + (len(emphasized) - frame_len) // hop_len)
 
     # ── 加窗 ──
-    # 直接截断信号会在帧边缘产生频谱泄漏（虚假频率成分）。
-    # Hann 窗让帧两端平滑衰减到零，抑制泄漏。类比：拍照时用渐变滤镜
-    # 避免边缘硬裁切产生的伪影。
     window = get_window("hann", frame_len)
 
-    # ── 线性间距滤波器组（LFCC 与 MFCC 的根本区别） ──
-    # 滤波器组就像一组"频段筛子"，把连续频谱筛成若干频道的能量。
-    # MFCC 用"梅尔刻度"——低频密、高频疏（模拟人耳）；
-    # LFCC 用"线性刻度"——等间距排列，每个频道宽度相同。
-    # 类比：MFCC 像用放大镜看低频、用望远镜看高频；
-    #       LFCC 像用同一把尺子量遍全频段。
-    n_filters = 30  # 30 个三角滤波器，比 MFCC 常用的 26 个更多，覆盖更细
+    # ── 线性间距滤波器组 ──
+    n_filters = 30
     low_bin = 0
     high_bin = n_fft // 2 + 1
-    # 等间距分布滤波器中心频率——这就是"线性"的含义
     filter_edges = np.linspace(low_bin, high_bin, n_filters + 2).astype(int)
 
-    # 构建三角滤波器矩阵：每个滤波器在中心频率处增益为1，向两侧线性衰减到0
     fbank = np.zeros((n_filters, n_fft // 2 + 1))
     for i in range(n_filters):
         left, center, right = filter_edges[i], filter_edges[i + 1], filter_edges[i + 2]
         for j in range(left, center):
-            fbank[i, j] = (j - left) / max(center - left, 1)   # 上升沿
+            fbank[i, j] = (j - left) / max(center - left, 1)
         for j in range(center, right):
-            fbank[i, j] = (right - j) / max(right - center, 1)  # 下降沿
+            fbank[i, j] = (right - j) / max(right - center, 1)
 
-    lfcc_features = np.zeros((n_lfcc, n_frames))
+    # ── 阶段一：逐帧 FFT → 滤波器组 → 收集 filterbank 矩阵 ──
+    # 必须先把所有帧的滤波器组输出收集成矩阵，才能做跨帧的倾斜消除
+    filter_bank_matrix = np.zeros((n_filters, n_frames))
 
     for frame_idx in range(n_frames):
         start = frame_idx * hop_len
         end = min(start + frame_len, len(emphasized))
         frame = np.zeros(frame_len)
         frame[: end - start] = emphasized[start:end]
-        frame *= window  # 加窗
+        frame *= window
 
-        # ── FFT（快速傅里叶变换） ──
-        # 把时域信号转换为频域信号，结果是复数数组。
-        # 取绝对值得到幅度谱（每个频率分量的强度），取前一半（频谱对称，后半是镜像）。
-        # 类比：FFT 像一台频谱仪，输入声音波形，输出"每个频率有多响"。
         spectrum = np.abs(fft(frame))[: n_fft // 2 + 1]
-        # 功率谱 = 幅度²/窗长，更常用于能量分析（dB 刻度的基准）
         power_spec = (spectrum ** 2) / n_fft
-
-        # ── 线性滤波 ──
-        # 用滤波器组矩阵乘以功率谱，得到每个滤波器频道的输出能量。
-        # 输出是 30 维向量，代表 30 个等宽频道的能量分布。
         filter_output = np.dot(fbank, power_spec)
-        filter_output = np.maximum(filter_output, 1e-10)  # 防止 log(0)
-        log_filter = np.log(filter_output)  # 取对数：人耳对响度的感知是对数的
+        filter_bank_matrix[:, frame_idx] = np.maximum(filter_output, 1e-10)
 
-        # ── DCT（离散余弦变换）→ LFCC ──
-        # DCT 把 30 维对数能量向量压缩成 13 维倒谱系数。
-        # 类比：DCT 就像"主成分分析"，把高维数据压缩到低维，
-        # 保留主要信息（低阶系数=频谱包络，高阶系数=精细纹理）。
-        # 去相关性：DCT 后各系数之间近似独立，便于后续比对。
-        for k in range(n_lfcc):
-            lfcc_features[k, frame_idx] = np.sum(
-                log_filter * np.cos(np.pi * k * (np.arange(n_filters) + 0.5) / n_filters)
-            ) * np.sqrt(2.0 / n_filters)
+    # ── 阶段二：log 域频谱倾斜消除 ──
+    # 传统 LFCC 用 np.log(filter_output)，但手机麦克风近场/远场会导致
+    # 频谱整体倾斜（高频随距离衰减），使同一设备在不同距离录到的 LFCC 偏移。
+    #
+    # 【为什么不用 PCEN？】
+    # PCEN 公式 (S/M)^α - δ)^r 设计初衷是"增强瞬态、抑制背景"（鸟类声学），
+    # 对准稳态机械噪声：S ≈ M → S/M ≈ 1 → (1-δ) 为负 → 负数分数次幂 = NaN。
+    # 即使修复 NaN，δ=2 也让稳态信号 PCEN 输出全零，LFCC 完全失去区分度。
+    #
+    # 【正确做法：log 域一阶倾斜消除】
+    # 频谱倾斜在对数域表现为频率的线性函数（斜率 = 衰减系数），
+    # 对每帧的 log 滤波器组输出拟合 1 阶多项式并减去，只保留非线性分量
+    # （峰、谷、谐波结构）——这些才是设备特征，倾斜只是录音距离的伪影。
+    log_filter_matrix = np.log(filter_bank_matrix)
+
+    # 逐帧消除线性倾斜：fit y = a*x + b, 保留 residual = y - (a*x + b)
+    freq_axis = np.arange(n_filters, dtype=float)
+    for t in range(n_frames):
+        coeffs = np.polyfit(freq_axis, log_filter_matrix[:, t], deg=1)
+        log_filter_matrix[:, t] -= np.polyval(coeffs, freq_axis)
+
+    # ── 阶段三：DCT → LFCC ──
+    lfcc_features = np.zeros((n_lfcc, n_frames))
+    dct_basis = np.array([
+        np.cos(np.pi * k * (np.arange(n_filters) + 0.5) / n_filters)
+        for k in range(n_lfcc)
+    ]) * np.sqrt(2.0 / n_filters)
+
+    for frame_idx in range(n_frames):
+        lfcc_features[:, frame_idx] = dct_basis @ log_filter_matrix[:, frame_idx]
 
     return lfcc_features
 
 
 def compute_harmonic_peaks(
-    samples: np.ndarray, sample_rate: int, n_peaks: int = 10, min_prominence: float = 0.05
+    samples: np.ndarray, sample_rate: int, n_peaks: int = 10, min_prominence: float = 0.05,
+    *,
+    welch_freqs: np.ndarray | None = None, welch_power: np.ndarray | None = None,
 ) -> list[dict]:
     """
     检测频谱中的谐波峰值 —— 机械噪声的"DNA条形码"。
@@ -624,45 +645,50 @@ def compute_harmonic_peaks(
     - n_peaks: 最多返回多少个峰（按强度排序取前 N）
     - min_prominence: 峰的最小显著度（相对最大峰的比值），
       0.05 表示只保留强度 ≥ 最大峰 5% 的峰，过滤噪声伪峰
+    - welch_freqs/welch_power: 可选的预计算 Welch 功率谱，
+      传入后跳过内部 FFT 计算，避免 compute_noise_signature 重复运算
 
     返回: 按幅度降序排列的峰列表 [{freq, magnitude, label}, ...]
     """
-    # FFT 计算——窗长取 16384 点的最近 2^N，获得更细的频率分辨率
-    # 频率分辨率 = 采样率/窗长，例如 44100/16384 ≈ 2.7Hz
-    # 即相邻两个频率点间隔 2.7Hz，足以分辨机械特征频率
-    fft_size = next_power_of_2(min(len(samples), 16384))
-    segment = samples[:fft_size]
-    window = get_window("hann", fft_size)
-    windowed = segment * window
-    spectrum = np.abs(fft(windowed))[: fft_size // 2]
-    freqs = fftfreq(fft_size, d=1.0 / sample_rate)[: fft_size // 2]
-    power = spectrum ** 2  # 功率谱：幅度的平方，更直观反映能量
+    if welch_freqs is not None and welch_power is not None:
+        freqs, power = welch_freqs, welch_power
+    else:
+        # 使用 scipy.signal.welch 计算全量信号的平均功率谱
+        # 窗长 16384 点 @44100Hz → 频率分辨率 ≈ 2.7Hz，足以分辨机械特征频率
+        from scipy.signal import welch as scipy_welch
+        nperseg = min(len(samples), 16384)
+        freqs, power = scipy_welch(
+            samples, fs=sample_rate, window="hann", nperseg=nperseg,
+            noverlap=nperseg // 2, scaling="spectrum",
+        )
 
-    # ── 局部峰值检测 ──
-    # 对功率谱做差分：如果某点左侧在上升（diff>0）、右侧在下降（diff≤0），
-    # 则该点就是局部极大值——即一个"峰"。
-    # 类比：登山时从上升变为下降的那个点就是山顶。
-    diff = np.diff(power)
-    peaks_mask = np.zeros(len(power), dtype=bool)
-    for i in range(1, len(diff)):
-        if diff[i - 1] > 0 and diff[i] <= 0 and power[i] > 0:
-            peaks_mask[i] = True
+    # ── 局部峰值检测（scipy.signal.find_peaks + prominence）──
+    # 传统手写 diff 循环找"全局最大值"会被低频风噪或高频电磁啸叫统治，
+    # 掩盖真实的机械峰。find_peaks 的 prominence 参数衡量峰相对于
+    # 局部基线（两侧最低点中的较高者）的高度，而非相对于全局最大值，
+    # 因此能有效过滤风噪/啸叫造成的虚假宽峰，只保留真正突出的窄峰。
+    from scipy.signal import find_peaks as scipy_find_peaks
 
-    # ── 显著度过滤 ──
-    # 不是每个微小的起伏都值得关注。只保留强度达到最大峰 5% 以上的峰，
-    # 排除由随机噪声引起的虚假峰值（就像过滤掉山丘，只留山峰）。
+    # prominence 的绝对阈值：功率谱最大值的 min_prominence 比例
     max_power = np.max(power) + 1e-10
-    threshold = min_prominence * max_power
-    peak_indices = np.where(peaks_mask & (power > threshold))[0]
+    prom_threshold = min_prominence * max_power
 
-    # 按幅度排序取前 N 个——最强的峰最有特征价值
+    peak_indices, peak_props = scipy_find_peaks(
+        power,
+        prominence=prom_threshold,
+        distance=max(1, int(5 / (freqs[1] - freqs[0] + 1e-10))),  # 最小间距 ~5Hz
+    )
+
     if len(peak_indices) == 0:
         return []
 
-    sorted_idx = peak_indices[np.argsort(power[peak_indices])[::-1]][:n_peaks]
+    # 按 prominence 降序排序取前 N 个——最显著的峰最有特征价值
+    prominences = peak_props["prominences"]
+    sorted_order = np.argsort(prominences)[::-1][:n_peaks]
 
     peaks = []
-    for idx in sorted_idx:
+    for order_idx in sorted_order:
+        idx = peak_indices[order_idx]
         freq = freqs[idx]
         mag = power[idx] / max_power
         label = _freq_label(freq)
@@ -709,6 +735,7 @@ def _freq_label(freq: float) -> str:
         return "超高频"
 
 
+@st.cache_data(hash_funcs={np.ndarray: lambda arr: arr.tobytes()}, show_spinner=False)
 def compute_noise_signature(samples: np.ndarray, sample_rate: int) -> dict:
     """
     提取机械噪声的特征签名 —— 噪声源的"全身CT扫描"。
@@ -729,13 +756,17 @@ def compute_noise_signature(samples: np.ndarray, sample_rate: int) -> dict:
     - harmonic_ratios: 基频与各谐波的频率比——同一设备的谐波比稳定
     - centroid/bandwidth/flatness: 频谱整体特征（质心=重心频率，带宽=分散程度）
     """
-    fft_size = next_power_of_2(min(len(samples), 16384))
-    segment = samples[:fft_size]
-    window = get_window("hann", fft_size)
-    windowed = segment * window
-    spectrum = np.abs(fft(windowed))[: fft_size // 2]
-    freqs = fftfreq(fft_size, d=1.0 / sample_rate)[: fft_size // 2]
-    power = spectrum ** 2
+    # 使用 scipy.signal.welch 计算全量信号的平均功率谱
+    # nperseg=16384 → 频率分辨率 ≈ 2.7Hz @44100Hz
+    # noverlap=50% → Welch 法标准重叠率，兼顾频率分辨率和统计稳定性
+    # scaling="spectrum" → 返回功率谱（V²），与旧代码行为一致
+    from scipy.signal import welch as scipy_welch
+    nperseg = min(len(samples), 16384)
+    freqs, power = scipy_welch(
+        samples, fs=sample_rate, window="hann", nperseg=nperseg,
+        noverlap=nperseg // 2, scaling="spectrum",
+    )
+
     total_power = np.sum(power) + 1e-10
 
     # ── 10 频段子带能量分布 ──
@@ -772,7 +803,11 @@ def compute_noise_signature(samples: np.ndarray, sample_rate: int) -> dict:
         band_names.append(name)
 
     # ── 谐波峰检测 ──
-    harmonic_peaks = compute_harmonic_peaks(samples, sample_rate, n_peaks=10)
+    # 直接传入已算好的 Welch 功率谱，避免重复 FFT
+    harmonic_peaks = compute_harmonic_peaks(
+        samples, sample_rate, n_peaks=10,
+        welch_freqs=freqs, welch_power=power,
+    )
 
     # ── 谐波频率比 ──
     # 基频（最大峰）与各谐波峰的频率比。
@@ -811,66 +846,570 @@ def compute_noise_signature(samples: np.ndarray, sample_rate: int) -> dict:
         "centroid": centroid,
         "bandwidth": bandwidth,
         "flatness": flatness,
-        "spectrum": spectrum / (np.max(spectrum) + 1e-10),
+        "spectrum": power / (np.max(power) + 1e-10),
         "freqs": freqs,
     }
 
 
 def remove_speech_band(samples: np.ndarray, sample_rate: int) -> np.ndarray:
     """
-    去除语音频带（300-3400Hz），保留机械噪声主能量区。
+    智能去除语音——VAD 帧丢弃法：检测到语音的帧直接从时域丢弃，
+    只保留无人声的帧拼接起来算特征。
 
-    【为什么需要过滤语音频带？】
-    在工业现场录音时，人声干扰是常见问题——操作员对话、广播通知等。
-    人声的能量集中在 300-3400Hz（基频 80-400Hz + 谐波延伸到 3kHz 以上），
-    而这个频段恰好与许多机械噪声的中频段重叠，会干扰比对结果。
+    【为什么不使用带阻滤波？】
+    之前的方案对语音帧做 300-3400Hz 带阻滤波，会在频域"挖洞"。
+    如果音频A有人说话被挖了频域大洞，音频B没人说话没有洞，
+    那么在计算子带能量、LFCC、包络谱时，音频A在 300-3400Hz 是真空的，
+    对比相似度会暴跌。
 
-    过滤掉语音频带后，比对只依赖：
-    - <300Hz：低频机械振动（电机转频、齿轮啮合低阶）
-    - >3400Hz：高频机械特征（轴承缺陷、气蚀、摩擦）
-    这两个区域人声能量很弱，机械特征相对"纯净"。
+    【帧丢弃法的优势】
+    直接丢弃语音帧，保留的非语音帧频谱完整（300-3400Hz 的机械特征完好）。
+    虽然时间不连续了，但对于稳态的机械频谱分析（Welch 法）来说，
+    只要总时长足够，结果远比挖个频域大洞要准得多。
 
-    【技术原理：频域滤波】
-    1. FFT 把时域信号转到频域（每个频率点一个复数值）
-    2. 在 300-3400Hz 范围把复数值乘以 0（该频段静音）
-    3. IFFT 把频域信号转回时域
-    类比：就像图片处理中用橡皮擦擦掉某个区域，只不过这里擦的是"频率"。
-
-    【过渡带：避免硬截断】
-    不能直接在 300Hz 和 3400Hz 处一刀切（0/1 跳变），
-    那样会产生"振铃"（Gibbs 现象）——在截止频率附近出现虚假波纹。
-    用余弦函数在截止频率两侧做 100Hz 宽度的平滑过渡，
-    类比：图片编辑中用"羽化"而不是硬边选区。
+    【VAD 原理：短时能量语音活动检测】
+    将信号分帧，计算每帧在 300-3400Hz 语音频带内的能量占比。
+    如果某帧的语音频带能量显著高于全频带平均水平，判定为语音帧。
     """
-    fft_size = next_power_of_2(len(samples))
-    padded = np.zeros(fft_size)
-    padded[:len(samples)] = samples
+    from scipy.signal import butter, sosfiltfilt
 
-    # FFT 转频域
-    freq_data = fft(padded)
-    freqs = fftfreq(fft_size, d=1.0 / sample_rate)
+    nyquist = sample_rate / 2.0
+    low_norm = 300.0 / nyquist
+    high_norm = 3400.0 / nyquist
 
-    # ── 构建频域遮罩 ──
-    # 初始全1（全部保留），然后在语音频段置0
-    mask = np.ones(fft_size, dtype=float)
-    speech_low, speech_high = 300, 3400
-    mask[(np.abs(freqs) >= speech_low) & (np.abs(freqs) <= speech_high)] = 0.0
+    # ── 步骤1：短时能量 VAD ──
+    frame_len = int(0.03 * sample_rate)   # 30ms 帧长
+    hop_len = frame_len // 2              # 50% 重叠
+    n_frames = max(1, 1 + (len(samples) - frame_len) // hop_len)
 
-    # ── 过渡带平滑（余弦过渡，防止振铃） ──
-    transition_width = 100  # Hz，过渡带宽度
-    for side in [1, -1]:
-        for edge in [speech_low, speech_high]:
-            transition = (np.abs(freqs) >= edge - transition_width) & (np.abs(freqs) <= edge + transition_width)
-            dist = (np.abs(freqs[transition]) - edge) / transition_width
-            dist = np.clip(dist, -1, 1)
-            # 半余弦过渡：从 1 平滑降到 0，再平滑升回 1
-            smooth = 0.5 + 0.5 * np.cos(np.pi * (1 - np.abs(dist)))
-            mask[transition] *= smooth
+    # 提取语音频带（300-3400Hz）用于 VAD
+    sos_speech = butter(4, [low_norm, high_norm], btype='bandpass', output='sos')
+    speech_band = sosfiltfilt(sos_speech, samples)
 
-    # 频域乘以遮罩 → IFFT 回时域
-    filtered = freq_data * mask
-    result = np.real(ifft(filtered))[:len(samples)]
+    # 计算每帧全频带和语音频带的 RMS
+    frame_rms_full = np.zeros(n_frames)
+    frame_rms_speech = np.zeros(n_frames)
+    for i in range(n_frames):
+        start = i * hop_len
+        end = min(start + frame_len, len(samples))
+        frame_rms_full[i] = np.sqrt(np.mean(samples[start:end] ** 2)) + 1e-10
+        frame_rms_speech[i] = np.sqrt(np.mean(speech_band[start:end] ** 2)) + 1e-10
+
+    # 语音活动判定：语音频带能量占全频带能量比例超过阈值
+    speech_ratio = frame_rms_speech / frame_rms_full
+    threshold = max(float(np.median(speech_ratio)) * 1.5, 0.35)
+    is_speech = speech_ratio > threshold
+
+    # 如果没有检测到语音帧，直接返回原信号
+    if not np.any(is_speech):
+        return samples.copy()
+
+    # ── 步骤2：丢弃语音帧，只保留非语音帧拼接 ──
+    non_speech_segments = []
+    for i in range(n_frames):
+        if not is_speech[i]:
+            start = i * hop_len
+            end = min(start + frame_len, len(samples))
+            non_speech_segments.append(samples[start:end])
+
+    if not non_speech_segments:
+        # 所有帧都被判定为语音，返回原信号（避免空信号）
+        return samples.copy()
+
+    result = np.concatenate(non_speech_segments)
+
+    # 安全检查：如果丢弃后时长太短（<0.2s），返回原信号
+    if len(result) < int(0.2 * sample_rate):
+        return samples.copy()
+
     return result
+
+
+def compute_envelope_spectrum(
+    samples: np.ndarray, sample_rate: int
+) -> dict:
+    """
+    提取包络频谱特征——机械噪声的"低频节奏指纹"。
+
+    【通俗解释】
+    如果说 FFT 看的是"声音里有哪些频率成分"，
+    那包络频谱看的是"声音的幅度在怎样波动"——即"节奏"。
+    很多机械噪声有周期性的幅度调制（如电机转动导致的嗡嗡声振幅起伏），
+    包络频谱能捕捉这种低频调制特征，与普通 FFT 形成互补。
+
+    【频率范围 3-150Hz 的依据】
+    包络谱（调制谱）的核心信息集中在极低频——转频及其倍频：
+    - 典型电机转频：25Hz（1500rpm）、50Hz（3000rpm）
+    - 轴承缺陷频率：通常在 5-100Hz
+    - 齿轮啮合的幅度调制频率：通常 < 100Hz
+    0-3Hz 被屏蔽（手持手机晃动的包络），>150Hz 主要是随机宽带噪声的包络，
+    引入无用变量会稀释相似度得分。
+
+    返回: {"envelope_spectrum": np.ndarray, "envelope_freqs": np.ndarray,
+           "envelope_peaks": list[dict]}
+    """
+    from scipy.signal import hilbert, find_peaks
+
+    # 希尔伯特变换取解析信号 → 取绝对值 = 包络
+    analytic = hilbert(samples)
+    envelope = np.abs(analytic)
+
+    # 去均值后做 Welch 功率谱
+    envelope_centered = envelope - np.mean(envelope)
+    from scipy.signal import welch as scipy_welch
+    nperseg = min(len(envelope_centered), 4096)
+    freqs, power = scipy_welch(
+        envelope_centered, fs=sample_rate, window="hann", nperseg=nperseg,
+        noverlap=nperseg // 2, scaling="spectrum",
+    )
+
+    # 只保留 3-150Hz 范围（核心调制信息，屏蔽超低频手持晃动和高频随机噪声）
+    freq_mask = (freqs >= 3.0) & (freqs <= 150.0)
+    env_freqs = freqs[freq_mask]
+    env_power = power[freq_mask]
+
+    # 归一化
+    env_power = env_power / (np.max(env_power) + 1e-10)
+
+    # 提取包络谱峰（调制峰结构）
+    envelope_peaks = []
+    if len(env_power) > 5:
+        peak_indices, _ = find_peaks(
+            env_power,
+            height=0.15,           # 只取显著峰（归一化后 >15%）
+            distance=max(1, int(2.0 / (env_freqs[1] - env_freqs[0] + 1e-10))),  # 最小峰距 2Hz
+            prominence=0.05,
+        )
+        for idx in peak_indices:
+            envelope_peaks.append({
+                "freq": round(float(env_freqs[idx]), 2),
+                "magnitude": round(float(env_power[idx]), 4),
+            })
+
+    return {
+        "envelope_spectrum": env_power,
+        "envelope_freqs": env_freqs,
+        "envelope_peaks": envelope_peaks,
+    }
+
+
+def _compute_peak_structure_similarity(
+    peaks_a: list[dict], peaks_b: list[dict]
+) -> float:
+    """
+    峰结构相似度——抗频率漂移的频谱形状比对。
+
+    【为什么余弦相似度不够？】
+    同一台电机转速差 3%，所有特征频率整体偏移 3%。
+    对余弦相似度来说，每个峰都"移位"了，得分会大幅下降。
+    但实际上这是同一台设备！峰与峰之间的关系（间距比、倍频关系）没变。
+
+    【本方法的策略】
+    不比较频谱曲线本身，而是比较峰与峰之间的"关系结构"：
+    1. 峰间距比（60%）：相邻峰之间的频率比是否一致
+       例如 A 的峰间距比 [2.0, 1.5, 1.3]，B 的 [2.0, 1.5, 1.3] → 高度相似
+       即使 A 的峰在 [25, 50, 75, 97.5] Hz，B 的在 [25.75, 51.5, 77.25, 100.4] Hz
+    2. 倍频关系（40%）：谐波峰与基频的整数倍关系
+       这部分与 harmonic_similarity 有重叠，但此处侧重"结构形态"而非精确匹配
+    """
+    if len(peaks_a) < 2 or len(peaks_b) < 2:
+        return 0.0
+
+    # ── 峰间距比 ──
+    # 计算相邻峰之间的频率比（归一化，消除绝对频率偏移）
+    def _peak_spacing_ratios(peaks):
+        freqs = sorted([p["freq"] for p in peaks])
+        if len(freqs) < 2:
+            return []
+        spacings = [freqs[i + 1] - freqs[i] for i in range(len(freqs) - 1)]
+        # 归一化为比率：每个间距 / 最小间距
+        min_sp = min(spacings) if spacings else 1
+        if min_sp < 1:
+            min_sp = 1
+        return [round(s / min_sp, 2) for s in spacings]
+
+    ratio_a = _peak_spacing_ratios(peaks_a)
+    ratio_b = _peak_spacing_ratios(peaks_b)
+
+    spacing_sim = 0.0
+    if ratio_a and ratio_b:
+        # 双向匹配
+        def _one_way(src, tgt):
+            scores = []
+            for r in src:
+                min_diff = min(abs(r - t) for t in tgt)
+                scores.append(max(0, 1.0 - min_diff / max(r, 0.1)))
+            return float(np.mean(scores)) if scores else 0.0
+        spacing_sim = (_one_way(ratio_a, ratio_b) + _one_way(ratio_b, ratio_a)) / 2
+
+    # ── 倍频关系 ──
+    # 检测峰之间是否存在近似整数倍关系
+    def _harmonic_structure(peaks):
+        freqs = sorted([p["freq"] for p in peaks])
+        if len(freqs) < 2 or freqs[0] < 1:
+            return []
+        fund = freqs[0]
+        ratios = [round(f / fund, 1) for f in freqs[1:]]
+        # 统计有多少是接近整数的
+        integer_count = sum(1 for r in ratios if abs(r - round(r)) < 0.2)
+        return ratios, integer_count / max(len(ratios), 1)
+
+    harm_a, harm_b = _harmonic_structure(peaks_a), _harmonic_structure(peaks_b)
+    harm_sim = 0.0
+    if harm_a and harm_b:
+        # 比较整数倍比例的相似度
+        int_ratio_a = harm_a[1] if isinstance(harm_a, tuple) else 0
+        int_ratio_b = harm_b[1] if isinstance(harm_b, tuple) else 0
+        harm_sim = 1.0 - abs(int_ratio_a - int_ratio_b)
+        # 也比较谐波比序列的相似度
+        ratios_a = harm_a[0] if isinstance(harm_a, tuple) else []
+        ratios_b = harm_b[0] if isinstance(harm_b, tuple) else []
+        if ratios_a and ratios_b:
+            def _one_way_ratio(src, tgt):
+                scores = []
+                for r in src:
+                    min_diff = min(abs(r - t) for t in tgt)
+                    scores.append(max(0, 1.0 - min_diff / 0.5))
+                return float(np.mean(scores)) if scores else 0.0
+            ratio_sim = (_one_way_ratio(ratios_a, ratios_b) + _one_way_ratio(ratios_b, ratios_a)) / 2
+            harm_sim = 0.5 * harm_sim + 0.5 * ratio_sim
+
+    return 0.6 * spacing_sim + 0.4 * harm_sim
+
+
+def compute_confidence_score(
+    samples: np.ndarray, sample_rate: int, harmonic_peaks: list[dict],
+    feature_scores: list[float] | None = None,
+) -> dict:
+    """
+    计算比对结果的置信度——"这次比对结果靠不靠谱？"
+
+    【为什么需要置信度？】
+    当音频太短、信噪比太差、人声太多或峰值太少时，
+    相似度分数本身的统计意义就很弱，强行判别容易误导。
+    置信度告诉用户："这个结论有多可靠"，低置信度时需谨慎参考。
+
+    六个评估因子（各 0-1 分）：
+    1. 时长充分性（20%）：音频是否足够长以提取稳定特征
+    2. 信噪比（20%）：有效信号是否足够强
+    3. 峰值充分性（15%）：检测到的特征峰数量是否足够
+    4. 稳态程度（15%）：信号是否足够稳定（非瞬态/突发）
+    5. 语音占比（10%）：人声干扰程度（占比越高越不可靠）
+    6. 维度一致性（20%）：各维度得分是否一致（一致性惩罚）
+       如果 std(feature_scores) > threshold → 置信度降低
+       含义：各维度得分差异大 → 某些维度可能不可靠 → 整体结论不可信
+    """
+    duration = len(samples) / sample_rate
+
+    # 1. 时长充分性：>=2s 满分，<0.5s 极低
+    duration_score = min(duration / 2.0, 1.0)
+
+    # 2. 信噪比：用信号 RMS 与静默段 RMS 的比值估计
+    # 简化方法：信号 RMS / 底部 10% 分位段 RMS
+    rms_total = np.sqrt(np.mean(samples ** 2)) + 1e-10
+    frame_len = int(0.05 * sample_rate)
+    n_frames = max(1, len(samples) // frame_len)
+    frame_rms = np.array([
+        np.sqrt(np.mean(samples[i * frame_len:(i + 1) * frame_len] ** 2)) + 1e-10
+        for i in range(n_frames)
+    ])
+    noise_floor = np.percentile(frame_rms, 10)
+    snr_estimate = rms_total / max(noise_floor, 1e-10)
+    # SNR > 20dB (≈10x) 满分，< 3dB (≈2x) 极低
+    snr_score = min(max((snr_estimate - 2) / 8, 0), 1.0)
+
+    # 3. 峰值充分性：>=5个峰满分，0个峰零分
+    peak_score = min(len(harmonic_peaks) / 5.0, 1.0)
+
+    # 4. 稳态程度：短时能量序列的变异系数（CV = std/mean）
+    # CV 越小 → 信号越稳态；CV 越大 → 瞬态/突发越多
+    if len(frame_rms) > 1:
+        cv = np.std(frame_rms) / (np.mean(frame_rms) + 1e-10)
+        # CV < 0.3 很稳态，> 1.0 很不稳定
+        stationarity_score = max(0, min(1.0 - (cv - 0.3) / 0.7, 1.0))
+    else:
+        stationarity_score = 0.5
+
+    # 5. 语音占比：300-3400Hz 能量占总能量的比例
+    from scipy.signal import butter, sosfiltfilt
+    nyquist = sample_rate / 2.0
+    if nyquist > 3400:
+        sos = butter(4, [300.0 / nyquist, 3400.0 / nyquist], btype='bandpass', output='sos')
+        speech_band = sosfiltfilt(sos, samples)
+        speech_ratio = np.sqrt(np.mean(speech_band ** 2)) / (rms_total + 1e-10)
+    else:
+        speech_ratio = 0.0
+    # 语音占比 < 20% 很好，> 60% 很差
+    speech_score = max(0, min(1.0 - (speech_ratio - 0.2) / 0.4, 1.0))
+
+    # 6. 维度一致性惩罚（Consistency Penalty）
+    # 如果各维度得分标准差太大，说明有些维度可能不可靠
+    consistency_score = 1.0  # 默认满分
+    if feature_scores and len(feature_scores) >= 3:
+        score_std = float(np.std(feature_scores))
+        # std < 0.10 → 各维度高度一致 → 满分
+        # std > 0.30 → 维度间矛盾大 → 大幅扣分
+        consistency_score = max(0, min(1.0 - (score_std - 0.10) / 0.20, 1.0))
+
+    # 加权综合
+    confidence = (
+        0.20 * duration_score
+        + 0.20 * snr_score
+        + 0.15 * peak_score
+        + 0.15 * stationarity_score
+        + 0.10 * speech_score
+        + 0.20 * consistency_score
+    )
+    confidence = max(0, min(1, confidence))
+
+    return {
+        "confidence": round(confidence, 3),
+        "duration_score": round(duration_score, 3),
+        "snr_score": round(snr_score, 3),
+        "peak_score": round(peak_score, 3),
+        "stationarity_score": round(stationarity_score, 3),
+        "speech_score": round(speech_score, 3),
+        "speech_ratio": round(float(speech_ratio), 3),
+        "consistency_score": round(consistency_score, 3),
+    }
+
+
+def _compute_envelope_peak_similarity(
+    env_peaks_a: list[dict], env_peaks_b: list[dict]
+) -> float:
+    """
+    包络谱峰匹配——比较调制峰结构而非整体曲线形状。
+
+    【为什么余弦相似度不够？】
+    包络谱的余弦相似度会被背景能量、宽带噪声严重干扰。
+    两段同源音频如果背景噪声水平不同，余弦得分会偏低。
+    但它们的调制峰结构（峰频率、峰间距、倍频关系）应该高度一致。
+
+    【本方法的策略】—— 类似 harmonic_peaks 的思路：
+    1. 峰频率匹配（40%）：调制峰频率是否接近
+    2. 峰间距比匹配（35%）：相邻峰之间的频率比是否一致（抗转速漂移）
+    3. 倍频关系（25%）：峰之间是否存在近似整数倍关系
+    """
+    if len(env_peaks_a) < 1 or len(env_peaks_b) < 1:
+        return 0.0
+
+    freqs_a = [p["freq"] for p in env_peaks_a]
+    freqs_b = [p["freq"] for p in env_peaks_b]
+
+    # ── 峰频率匹配（双向） ──
+    def _one_way_freq(src, tgt, tol_ratio=0.08):
+        scores = []
+        for f in src:
+            min_diff = min(abs(f - t) for t in tgt)
+            tolerance = max(f * tol_ratio, 1.5)  # 包络频率较低，容差 8% 或 1.5Hz
+            scores.append(max(0, 1.0 - min_diff / tolerance))
+        return float(np.mean(scores)) if scores else 0.0
+
+    freq_sim = (_one_way_freq(freqs_a, freqs_b) + _one_way_freq(freqs_b, freqs_a)) / 2
+
+    # ── 峰间距比匹配 ──
+    def _spacing_ratios(freqs):
+        if len(freqs) < 2:
+            return []
+        sorted_f = sorted(freqs)
+        spacings = [sorted_f[i + 1] - sorted_f[i] for i in range(len(sorted_f) - 1)]
+        min_sp = min(spacings) if spacings else 1
+        if min_sp < 0.5:
+            min_sp = 0.5
+        return [round(s / min_sp, 2) for s in spacings]
+
+    ratio_a = _spacing_ratios(freqs_a)
+    ratio_b = _spacing_ratios(freqs_b)
+
+    spacing_sim = 0.0
+    if ratio_a and ratio_b:
+        def _one_way_ratio(src, tgt):
+            scores = []
+            for r in src:
+                min_diff = min(abs(r - t) for t in tgt)
+                scores.append(max(0, 1.0 - min_diff / max(r, 0.1)))
+            return float(np.mean(scores)) if scores else 0.0
+        spacing_sim = (_one_way_ratio(ratio_a, ratio_b) + _one_way_ratio(ratio_b, ratio_a)) / 2
+
+    # ── 倍频关系 ──
+    def _harmonic_check(freqs):
+        if len(freqs) < 2 or freqs[0] < 1:
+            return 0.0
+        fund = min(freqs)
+        ratios = [f / fund for f in freqs[1:]]
+        integer_count = sum(1 for r in ratios if abs(r - round(r)) < 0.25)
+        return integer_count / max(len(ratios), 1)
+
+    harm_a = _harmonic_check(freqs_a)
+    harm_b = _harmonic_check(freqs_b)
+    harm_sim = 1.0 - abs(harm_a - harm_b)
+
+    return 0.40 * freq_sim + 0.35 * spacing_sim + 0.25 * harm_sim
+
+
+def _compute_topk_anomaly_similarity(
+    samples_a: np.ndarray, samples_b: np.ndarray, sample_rate: int, top_k: int = 5
+) -> float:
+    """
+    Top-K 异常帧比对——捕捉"10% 关键异响"而非只看全局平均。
+
+    【为什么需要 Top-K？】
+    当前大量特征本质是全局统计平均，但机械音频经常是：90% 正常 + 10% 关键异响。
+    全局平均会把异响淹没，两段含有相同异响的音频可能被判为不相似。
+
+    【方法】
+    对每段音频分帧，提取三种异常指标：
+    1. RMS 最高帧——最响的瞬间
+    2. 谱峭度最高帧——最"尖锐/突发"的帧
+    3. 高频能量比最高帧——最"刺耳"的帧
+    取每种指标的前 K 帧，对频谱取 dB 对数域，计算皮尔逊相关系数。
+
+    【为什么用 dB + Pearson 而非线性功率 + 余弦？】
+    线性功率谱值极度倾斜，一个强尖峰会统治余弦相似度得分，掩盖其他频带结构；
+    手机不同的 EQ 在线性域产生不可逆扭曲。dB 域 + 皮尔逊自动中心化（去均值），
+    能在数学上完美抵消手机麦克风带来的常数增益/减益（EQ 频响在对数域 = 加减常数）。
+    """
+    from scipy.signal import welch as scipy_welch
+
+    frame_len = int(0.05 * sample_rate)  # 50ms 帧长
+    hop_len = frame_len // 2
+    n_fft = min(frame_len, 1024)
+
+    def _extract_frame_features(samples):
+        """分帧并提取 RMS、谱峭度、高频能量比、dB 频谱"""
+        n_frames = max(1, 1 + (len(samples) - frame_len) // hop_len)
+        frame_rms = np.zeros(n_frames)
+        frame_kurtosis = np.zeros(n_frames)
+        frame_hf_ratio = np.zeros(n_frames)
+        frame_spectra_db = []
+
+        for i in range(n_frames):
+            start = i * hop_len
+            end = min(start + frame_len, len(samples))
+            frame = samples[start:end]
+
+            # RMS
+            rms = np.sqrt(np.mean(frame ** 2)) + 1e-10
+            frame_rms[i] = rms
+
+            # 简化谱峭度：帧能量的四阶矩 / 二阶矩的平方
+            centered = frame - np.mean(frame)
+            var = np.var(centered) + 1e-10
+            kurt = np.mean(centered ** 4) / (var ** 2)
+            frame_kurtosis[i] = kurt
+
+            # Welch 功率谱
+            freqs, power = scipy_welch(
+                frame, fs=sample_rate, nperseg=min(len(frame), n_fft),
+                noverlap=min(len(frame), n_fft) // 2, scaling="spectrum",
+            )
+            # 高频能量比：>4kHz 能量 / 全频带能量
+            total_power = np.sum(power) + 1e-10
+            hf_mask = freqs > 4000
+            hf_power = np.sum(power[hf_mask]) + 1e-10
+            frame_hf_ratio[i] = hf_power / total_power
+
+            # dB 对数域频谱（用于皮尔逊相关系数计算）
+            # 10 * log10(power) 将功率转到 dB 域，压缩动态范围
+            power_db = 10.0 * np.log10(np.maximum(power, 1e-20))
+            frame_spectra_db.append(power_db)
+
+        return frame_rms, frame_kurtosis, frame_hf_ratio, frame_spectra_db, freqs
+
+    rms_a, kurt_a, hf_a, spectra_db_a, freqs_a = _extract_frame_features(samples_a)
+    rms_b, kurt_b, hf_b, spectra_db_b, freqs_b = _extract_frame_features(samples_b)
+
+    # 对齐频谱长度
+    min_len = min(len(freqs_a), len(freqs_b))
+
+    def _topk_avg_db(rms, kurtosis, hf_ratio, spectra_db, k):
+        """取三种指标 Top-K 帧的 dB 频谱，求均值"""
+        selected_indices = set()
+
+        # RMS Top-K
+        top_rms = np.argsort(rms)[-k:]
+        selected_indices.update(top_rms)
+
+        # 谱峭度 Top-K
+        top_kurt = np.argsort(kurtosis)[-k:]
+        selected_indices.update(top_kurt)
+
+        # 高频能量比 Top-K
+        top_hf = np.argsort(hf_ratio)[-k:]
+        selected_indices.update(top_hf)
+
+        # 拼接所有选中帧的 dB 频谱
+        spectra_list = []
+        for idx in selected_indices:
+            if idx < len(spectra_db):
+                s = spectra_db[idx][:min_len]
+                spectra_list.append(s)
+
+        if not spectra_list:
+            return None
+        # 取均值 dB 频谱
+        return np.mean(spectra_list, axis=0)
+
+    topk_a = _topk_avg_db(rms_a, kurt_a, hf_a, spectra_db_a, top_k)
+    topk_b = _topk_avg_db(rms_b, kurt_b, hf_b, spectra_db_b, top_k)
+
+    if topk_a is None or topk_b is None:
+        return 0.0
+
+    # 皮尔逊相关系数（dB 域）
+    # 皮尔逊 = 去均值后的余弦相似度，自动抵消手机 EQ 带来的常数增益/减益
+    a_centered = topk_a - np.mean(topk_a)
+    b_centered = topk_b - np.mean(topk_b)
+    na, nb = np.linalg.norm(a_centered), np.linalg.norm(b_centered)
+    if na < 1e-10 or nb < 1e-10:
+        return 0.0
+    return float(np.dot(a_centered, b_centered) / (na * nb))
+
+
+def apply_pcen(
+    spectrogram: np.ndarray, sample_rate: int, hop_len: int,
+    alpha: float = 0.98, delta: float = 2.0, r: float = 0.5,
+) -> np.ndarray:
+    """
+    PCEN (Per-Channel Energy Normalization)——频谱倾斜补偿。
+
+    【为什么需要 PCEN？】
+    录音距离远近会改变频谱的"倾斜度"：近距离录音高频丰富，远距离高频衰减。
+    普通归一化只调音量，不调频谱倾斜。PCEN 通过指数归一化，
+    让每个频率通道的动态范围独立归一化，相当于"自动均衡"。
+
+    【原理】
+    PCEN(t, f) = (S(t, f) / (ε + M(t, f)))^α - δ)^r
+    其中 M(t, f) 是该频率通道的指数移动平均（IIR 平滑），
+    代表该通道的"背景水平"。除以背景水平后取幂，实现自适应增益控制。
+
+    参数说明：
+    - alpha: 控制增益压缩强度（0.95-0.99，越大压缩越强）
+    - delta: 偏移量，防止对数域负值（通常 2-10）
+    - r: 最终幂次，控制动态范围压缩（0.3-0.5）
+    """
+    _, n_frames = spectrogram.shape
+
+    # IIR 平滑计算每个频率通道的背景水平 M(t, f)
+    # M(t, f) = (1 - s) * M(t-1, f) + s * S(t, f)
+    # 平滑系数 s 由时间常数决定
+    time_constant = 0.5  # 500ms 时间常数
+    s = 1.0 - np.exp(-hop_len / (time_constant * sample_rate))
+
+    M = np.zeros_like(spectrogram)
+    M[:, 0] = spectrogram[:, 0]
+    for t in range(1, n_frames):
+        M[:, t] = (1 - s) * M[:, t - 1] + s * spectrogram[:, t]
+
+    # PCEN 公式
+    eps = 1e-6
+    pcen = (spectrogram / (eps + M)) ** alpha
+    # 先 clip 再取幂：避免 (负值)^分数次幂 产生 NaN
+    # 例如稳态信号 S/M≈1 → (1-δ)<0 → (-1)^0.5=NaN
+    pcen = np.maximum(pcen - delta, 0)
+    pcen = pcen ** r
+
+    return pcen
 
 
 def compute_audio_similarity(
@@ -885,19 +1424,22 @@ def compute_audio_similarity(
     ┌──────────────┐     ┌──────────────┐
     │  音频 A      │     │  音频 B      │
     └──────┬───────┘     └──────┬───────┘
-           │  重采样→44100Hz     │  重采样→44100Hz
-           │  (可选)过滤语音     │  (可选)过滤语音
-           │  归一化幅度         │  归一化幅度
+           │  resample_poly→44100Hz  │  resample_poly→44100Hz
+           │  (可选)VAD帧丢弃语音     │  (可选)VAD帧丢弃语音
+           │  归一化幅度+PCEN补偿     │  归一化幅度+PCEN补偿
            ▼                     ▼
     ┌──────────────────────────────────────────┐
-    │            四维度特征提取 & 比对            │
+    │          六维度特征提取 & 比对              │
     │                                          │
-    │  ① LFCC: 帧级倒谱系数 → 余弦相似度  (20%) │
-    │  ② 频谱特征: 子带能量+质心+带宽    (25%) │
-    │  ③ 频谱形状: 归一化频谱曲线比对    (25%) │
-    │  ④ 谐波指纹: 特征峰+谐波比比对    (30%) │
+    │  ① LFCC: 增强统计分布+分位数+Wasserstein (15%) │
+    │  ② 频谱特征: PCEN补偿+子带能量+质心  (15%) │
+    │  ③ 峰结构: 抗漂移的峰间距+倍频关系   (20%) │
+    │  ④ 谐波指纹: 特征峰+谐波比比对      (25%) │
+    │  ⑤ 包络谱: 3-150Hz峰匹配+曲线形状   (15%) │
+    │  ⑥ 异常帧: Top-K RMS/峭度/高频帧    (10%) │
     │                                          │
-    │          加权求和 → 综合相似度 0-100%      │
+    │       加权求和 → 综合相似度 0-100%        │
+    │       + 一致性惩罚 → 置信度评估            │
     └──────────────────────────────────────────┘
 
     【为什么采样率统一到 44100Hz？】
@@ -912,73 +1454,141 @@ def compute_audio_similarity(
     """
     TARGET_SR = 44100
 
+    # ── 重采样：使用 resample_poly 替代 resample，减少频域伪影 ──
+    # scipy.signal.resample 使用 FFT-based 方法，在信号首尾可能产生振铃伪影
+    # resample_poly 基于多相滤波，抗混叠效果更好，频域更干净
+    from math import gcd
+
     def resample(samples, sr_from, sr_to):
-        """线性插值重采样：改变采样率而不改变播放速度/音高"""
+        """使用 scipy.signal.resample_poly 进行抗混叠重采样"""
         if sr_from == sr_to:
             return samples
-        duration = len(samples) / sr_from
-        target_len = int(duration * sr_to)
+        # 计算上/下采样因子（互质化）
+        g = gcd(sr_to, sr_from)
+        up = sr_to // g
+        down = sr_from // g
+        target_len = int(len(samples) * up / down)
         if target_len < 100:
             return samples
-        indices = np.linspace(0, len(samples) - 1, target_len).astype(int)
-        return samples[indices]
+        from scipy.signal import resample_poly as scipy_resample_poly
+        return scipy_resample_poly(samples, up, down)
 
     a = resample(samples_a, sr_a, TARGET_SR)
     b = resample(samples_b, sr_b, TARGET_SR)
 
-    # 可选：过滤语音频带（勾选后去除 300-3400Hz 人声干扰）
+    # 可选：智能语音过滤（VAD 帧丢弃法——丢弃语音帧，保留非语音帧）
+    low_energy_warning = False
     if filter_speech:
+        len_before_a, len_before_b = len(a), len(b)
         a = remove_speech_band(a, TARGET_SR)
         b = remove_speech_band(b, TARGET_SR)
+        # 帧丢弃后时长可能大幅缩短
+        if len_before_a > 1000 and len(a) / len_before_a < 0.1:
+            low_energy_warning = True
+        if len_before_b > 1000 and len(b) / len_before_b < 0.1:
+            low_energy_warning = True
 
     # 归一化幅度到 [-1, 1]，消除录音音量差异的影响
     a = a / (np.max(np.abs(a)) + 1e-10)
     b = b / (np.max(np.abs(b)) + 1e-10)
 
     # ════════════════════════════════════════════════════════
-    # 维度 1：LFCC 余弦相似度（20%）
+    # 频谱倾斜补偿（已在 compute_lfcc 内部集成）
     # ════════════════════════════════════════════════════════
-    # LFCC 是频谱的紧凑数值表示。两段音频每帧都算出 13 维 LFCC 向量，
-    # 逐帧计算向量夹角的余弦值 → 越接近 1 说明"音色"越像。
-    # 取所有帧的平均作为整体 LFCC 相似度。
+    # 录音距离不同会导致频谱倾斜（近场高频丰富，远场高频衰减）。
+    # compute_lfcc 内部已将传统 np.log(filter_output) 替换为
+    # log 域一阶倾斜消除：
+    #   1. 先收集所有帧的滤波器组输出矩阵 (n_filters × n_frames)
+    #   2. 取对数后，对每帧拟合 1 阶多项式并减去倾斜分量
+    #   3. 保留非线性分量（峰、谷、谐波结构）再做 DCT → LFCC
+    # 这比 PCEN 更适合机械噪声：PCEN 设计用于增强瞬态/抑制背景，
+    # 对准稳态信号 S≈M 会导致 NaN 或全零输出。
     lfcc_a = compute_lfcc(a, TARGET_SR)
     lfcc_b = compute_lfcc(b, TARGET_SR)
 
-    # 对齐帧数：取较短的音频帧数，逐帧比对
-    min_frames = min(lfcc_a.shape[1], lfcc_b.shape[1])
-    lfcc_a_aligned = lfcc_a[:, :min_frames]
-    lfcc_b_aligned = lfcc_b[:, :min_frames]
+    # ════════════════════════════════════════════════════════
+    # 维度 1：LFCC 增强统计分布相似度（15%）
+    # ════════════════════════════════════════════════════════
+    # 除了均值和标准差，新增：
+    # - 分位数统计（P10, P50, P90）：捕捉分布的偏态和尾部特征
+    # - 协方差结构：反映 LFCC 各维度之间的耦合关系
+    # - Wasserstein 距离：度量两个分布之间的"搬运成本"
+    # 均值和标准差
+    mean_a, std_a = np.mean(lfcc_a, axis=1), np.std(lfcc_a, axis=1)
+    mean_b, std_b = np.mean(lfcc_b, axis=1), np.std(lfcc_b, axis=1)
 
-    # 逐帧余弦相似度
-    # 余弦相似度 = 两个向量的内积 / (模长之积)
-    # = cos(θ)，θ 是向量夹角。θ=0°→完全相同(1)，θ=90°→完全正交(0)
-    frame_sims = []
-    for f in range(min_frames):
-        va, vb = lfcc_a_aligned[:, f], lfcc_b_aligned[:, f]
-        norm_a, norm_b = np.linalg.norm(va), np.linalg.norm(vb)
-        if norm_a > 1e-10 and norm_b > 1e-10:
-            frame_sims.append(float(np.dot(va, vb) / (norm_a * norm_b)))
-    lfcc_similarity = float(np.mean(frame_sims)) if frame_sims else 0.0
+    # 均值向量余弦相似度
+    norm_ma, norm_mb = np.linalg.norm(mean_a), np.linalg.norm(mean_b)
+    mean_sim = float(np.dot(mean_a, mean_b) / (norm_ma * norm_mb)) if norm_ma > 1e-10 and norm_mb > 1e-10 else 0.0
+
+    # 标准差向量余弦相似度
+    norm_sa, norm_sb = np.linalg.norm(std_a), np.linalg.norm(std_b)
+    std_sim = float(np.dot(std_a, std_b) / (norm_sa * norm_sb)) if norm_sa > 1e-10 and norm_sb > 1e-10 else 0.0
+
+    # 分位数统计（每维系数的 P10, P50, P90）
+    q10_a, q50_a, q90_a = np.percentile(lfcc_a, [10, 50, 90], axis=1)
+    q10_b, q50_b, q90_b = np.percentile(lfcc_b, [10, 50, 90], axis=1)
+    # 分位数向量的余弦相似度
+    def _cosine_sim(va, vb):
+        na, nb = np.linalg.norm(va), np.linalg.norm(vb)
+        return float(np.dot(va, vb) / (na * nb)) if na > 1e-10 and nb > 1e-10 else 0.0
+    q10_sim = _cosine_sim(q10_a, q10_b)
+    q50_sim = _cosine_sim(q50_a, q50_b)
+    q90_sim = _cosine_sim(q90_a, q90_b)
+    quantile_sim = (q10_sim + q50_sim + q90_sim) / 3
+
+    # 协方差结构（上三角展平后的余弦相似度）
+    n_coef = lfcc_a.shape[0]
+    if n_coef >= 2:
+        cov_a = np.cov(lfcc_a)
+        cov_b = np.cov(lfcc_b)
+        triu_idx = np.triu_indices(n_coef, k=1)
+        cov_vec_a = cov_a[triu_idx]
+        cov_vec_b = cov_b[triu_idx]
+        cov_sim = _cosine_sim(cov_vec_a, cov_vec_b)
+    else:
+        cov_sim = 0.0
+
+    # Wasserstein 距离（每维系数取平均，转为相似度）
+    from scipy.stats import wasserstein_distance
+    wd_per_dim = []
+    for dim in range(min(lfcc_a.shape[0], lfcc_b.shape[0])):
+        wd = wasserstein_distance(lfcc_a[dim], lfcc_b[dim])
+        wd_per_dim.append(wd)
+    mean_wd = float(np.mean(wd_per_dim)) if wd_per_dim else 1.0
+    wasserstein_sim = max(0, 1.0 - mean_wd / 5.0)
+
+    # 综合五项 LFCC 统计
+    lfcc_similarity = (
+        0.25 * max(mean_sim, 0)
+        + 0.15 * max(std_sim, 0)
+        + 0.20 * max(quantile_sim, 0)
+        + 0.15 * max(cov_sim, 0)
+        + 0.25 * max(wasserstein_sim, 0)
+    )
 
     # ════════════════════════════════════════════════════════
-    # 维度 2：频谱特征相似度（25%）
+    # 维度 2：频谱特征相似度（15%）
     # ════════════════════════════════════════════════════════
-    # 包含4个子指标的平均值：
-    # - 子带能量分布：10个频段各自的能量占比是否一致
-    # - 频谱质心：能量重心频率是否接近
-    # - 频谱带宽：频率分散程度是否接近
-    # - 频谱平坦度：噪声"纯度"是否接近（嗡嗡 vs 沙沙）
     sig_a = compute_noise_signature(a, TARGET_SR)
     sig_b = compute_noise_signature(b, TARGET_SR)
 
-    # 子带能量分布相似度（余弦相似度）
-    # 类比：两个饼图的扇形比例是否一致
     be_a = np.array(sig_a["band_energies"])
     be_b = np.array(sig_b["band_energies"])
-    band_sim = float(np.dot(be_a, be_b) / (np.linalg.norm(be_a) * np.linalg.norm(be_b) + 1e-10))
 
-    # 标量特征相似度（归一化差值法）
-    # 1.0 - |A-B|/max(|A|,|B|)：值越接近越相似，1.0=完全相同
+    # PCEN 频谱倾斜补偿：对子带能量做对数域归一化
+    # 相当于对每个子带的能量做"相对于自身平均"的归一化，
+    # 消除近场/远场导致的整体能量倾斜
+    def _pcen_band_normalize(band_energies):
+        """对子带能量做简化的 PCEN 归一化"""
+        be_log = np.log1p(band_energies * 1000)  # 对数压缩
+        be_mean = np.mean(be_log) + 1e-10
+        return np.clip((be_log / be_mean - 1.0) * 2 + 0.5, 0, 1)
+
+    be_a_norm = _pcen_band_normalize(be_a)
+    be_b_norm = _pcen_band_normalize(be_b)
+    band_sim = float(np.dot(be_a_norm, be_b_norm) / (np.linalg.norm(be_a_norm) * np.linalg.norm(be_b_norm) + 1e-10))
+
     def scalar_sim(va, vb):
         denom = max(abs(va), abs(vb), 1e-10)
         return 1.0 - min(abs(va - vb) / denom, 1.0)
@@ -990,85 +1600,140 @@ def compute_audio_similarity(
     spectral_similarity = float(np.mean([band_sim, centroid_sim, bandwidth_sim, flatness_sim]))
 
     # ════════════════════════════════════════════════════════
-    # 维度 3：频谱形状相似度（25%）
+    # 维度 3：峰结构相似度（20%）—— 抗频率漂移
     # ════════════════════════════════════════════════════════
-    # 把频谱曲线归一化后计算余弦相似度。
-    # 归一化消除了绝对音量，只比较"曲线形状"——
-    # 哪些频率有峰、哪些频率有谷，形态是否一致。
-    # 类比：两条股票走势线，虽然价格不同但走势一样=高度相关
-    spec_a = sig_a["spectrum"]
-    spec_b = sig_b["spectrum"]
-    min_len = min(len(spec_a), len(spec_b))
-    spec_a, spec_b = spec_a[:min_len], spec_b[:min_len]
-    spectrum_similarity = float(
-        np.dot(spec_a, spec_b) / (np.linalg.norm(spec_a) * np.linalg.norm(spec_b) + 1e-10)
-    )
-
-    # ════════════════════════════════════════════════════════
-    # 维度 4：谐波指纹相似度（30%）——机械噪声最核心的识别指标
-    # ════════════════════════════════════════════════════════
-    # 机械设备的特征频率由物理参数决定（转速、齿数、轴承型号等），
-    # 这些频率在频谱上形成"谐波系列"——基频 + 整数倍频率的峰群。
-    # 同一设备不管在哪录、音量多大，这些峰的频率和频率比是不变的。
-    # 这是"同源判断"最可靠的维度——即使其他维度受环境干扰波动，
-    # 谐波指纹也能精准识别。
     peaks_a = sig_a["harmonic_peaks"]
     peaks_b = sig_b["harmonic_peaks"]
+    peak_structure_similarity = _compute_peak_structure_similarity(peaks_a, peaks_b)
+
+    # ════════════════════════════════════════════════════════
+    # 维度 4：谐波指纹相似度（25%）—— 机械噪声最核心的识别指标
+    # ════════════════════════════════════════════════════════
     harmonic_similarity = _compute_harmonic_similarity(peaks_a, peaks_b)
 
     # ════════════════════════════════════════════════════════
-    # 综合加权评分
+    # 维度 5：包络谱相似度（15%）—— 幅度调制的"节奏指纹"
+    # ════════════════════════════════════════════════════════
+    # 包络谱范围：3-150Hz（核心调制信息，屏蔽手持晃动 0-3Hz 和高频噪声 >150Hz）
+    # 比较方法：包络峰匹配（峰频率+峰间距+倍频关系），而非余弦相似度
+    env_a = compute_envelope_spectrum(a, TARGET_SR)
+    env_b = compute_envelope_spectrum(b, TARGET_SR)
+
+    # 包络峰匹配（主方法）
+    env_peaks_a = env_a.get("envelope_peaks", [])
+    env_peaks_b = env_b.get("envelope_peaks", [])
+    envelope_peak_sim = _compute_envelope_peak_similarity(env_peaks_a, env_peaks_b)
+
+    # 包络曲线余弦相似度（辅助方法，权重较低）
+    env_spec_a = env_a["envelope_spectrum"]
+    env_spec_b = env_b["envelope_spectrum"]
+    min_env_len = min(len(env_spec_a), len(env_spec_b))
+    if min_env_len > 1:
+        envelope_curve_sim = float(
+            np.dot(env_spec_a[:min_env_len], env_spec_b[:min_env_len])
+            / (np.linalg.norm(env_spec_a[:min_env_len]) * np.linalg.norm(env_spec_b[:min_env_len]) + 1e-10)
+        )
+    else:
+        envelope_curve_sim = 0.0
+
+    # 综合包络相似度：峰匹配为主（70%），曲线形状为辅（30%）
+    if env_peaks_a and env_peaks_b:
+        envelope_similarity = 0.70 * envelope_peak_sim + 0.30 * envelope_curve_sim
+    else:
+        # 没有包络峰时退化为纯曲线相似度
+        envelope_similarity = envelope_curve_sim
+
+    # ════════════════════════════════════════════════════════
+    # 维度 6：Top-K 异常帧相似度（10%）—— 捕捉关键异响
+    # ════════════════════════════════════════════════════════
+    # 机械音频经常是 90% 正常 + 10% 关键异响，全局平均会淹没异响。
+    # 提取 RMS 最高帧、谱峭度最高帧、高频能量最高帧，单独比较。
+    topk_similarity = _compute_topk_anomaly_similarity(a, b, TARGET_SR, top_k=5)
+
+    # ════════════════════════════════════════════════════════
+    # 综合加权评分（六维）
     # ════════════════════════════════════════════════════════
     # 权重分配逻辑：
-    # - 谐波指纹 30%：最可靠的机械特征，权重最高
-    # - 频谱特征 25%：子带能量+标量特征，反映整体能量分布
-    # - 频谱形状 25%：曲线形态匹配，对环境变化有一定鲁棒性
-    # - LFCC 20%：补充音色信息，权重较低因为对增益/距离敏感
+    # - 谐波指纹 25%：最可靠的机械特征
+    # - 峰结构 20%：抗漂移的频谱形状比对
+    # - LFCC 15%：增强统计分布，补充音色信息
+    # - 频谱特征 15%：子带能量+标量特征（PCEN 补偿后）
+    # - 包络谱 15%：包络峰匹配为主，幅度调制节奏指纹
+    # - Top-K 异常 10%：捕捉关键异响，补充全局平均的盲区
+    feature_scores = [
+        max(lfcc_similarity, 0),
+        max(spectral_similarity, 0),
+        max(peak_structure_similarity, 0),
+        max(harmonic_similarity, 0),
+        max(envelope_similarity, 0),
+        max(topk_similarity, 0),
+    ]
     overall = (
-        0.20 * max(lfcc_similarity, 0)
-        + 0.25 * max(spectral_similarity, 0)
-        + 0.25 * max(spectrum_similarity, 0)
-        + 0.30 * max(harmonic_similarity, 0)
+        0.15 * max(lfcc_similarity, 0)
+        + 0.15 * max(spectral_similarity, 0)
+        + 0.20 * max(peak_structure_similarity, 0)
+        + 0.25 * max(harmonic_similarity, 0)
+        + 0.15 * max(envelope_similarity, 0)
+        + 0.10 * max(topk_similarity, 0)
     )
     overall_pct = max(0, min(100, overall * 100))
 
+    # ════════════════════════════════════════════════════════
+    # 置信度评估（含维度一致性惩罚）
+    # ════════════════════════════════════════════════════════
+    conf_a = compute_confidence_score(a, TARGET_SR, peaks_a, feature_scores)
+    conf_b = compute_confidence_score(b, TARGET_SR, peaks_b, feature_scores)
+    # 取两段音频置信度的较低值（木桶效应）
+    confidence = min(conf_a["confidence"], conf_b["confidence"])
+
     # ── 同源判断阈值 ──
-    # 这些阈值基于经验设定，实际应用中可根据具体场景微调：
-    # - ≥75%：谐波峰频率高度重合 + 频谱形状非常吻合 → 高度同源
-    # - 55-75%：部分特征相似，但不完全吻合 → 可能同源，需佐证
-    # - 35-55%：个别特征相似，但整体差异明显 → 相似度低
-    # - <35%：各维度差异都大 → 不同声源
+    low_confidence = confidence < 0.4
+    consistency_penalty = min(conf_a.get("consistency_score", 1.0), conf_b.get("consistency_score", 1.0))
     if overall_pct >= 75:
         conclusion = "高度同源"
-        conclusion_detail = "两段音频的噪声指纹高度吻合，极大概率来自同一噪声源或具有相同的振动机理。"
-    elif overall_pct >= 55:
+        conclusion_detail = "六维噪声指纹高度吻合，极大概率来自同一噪声源或具有相同的振动机理。"
+    elif overall_pct >= 65:
         conclusion = "可能同源"
-        conclusion_detail = "两段音频存在一定相似性，可能来自同一类噪声源或相似机理，但需结合其他证据进一步确认。"
-    elif overall_pct >= 35:
+        conclusion_detail = "多数特征匹配但部分维度存在差异，可能来自同一类噪声源或相似机理，需结合其他证据进一步确认。"
+    elif overall_pct >= 45:
         conclusion = "相似度低"
-        conclusion_detail = "两段音频噪声特征差异较明显，不太可能来自同一噪声源。"
+        conclusion_detail = "个别特征有相似之处但整体差异较大，两段音频大概率不是来自同一噪声源。"
     else:
-        conclusion = "非同源"
-        conclusion_detail = "两段音频噪声指纹显著不同，来自不同噪声源。"
+        conclusion = "大概率不同源"
+        conclusion_detail = "六维噪声指纹差异显著，来自不同噪声源的可能性很大。"
+
+    if low_confidence:
+        conclusion_detail += " ⚠️ 置信度较低（音频质量/时长/信噪比不足），结论仅供参考，建议补充更高质量的录音。"
+    if consistency_penalty < 0.5:
+        conclusion_detail += " ⚠️ 维度一致性低（各特征维度得分差异较大），可能存在录音条件不一致，结论需谨慎参考。"
 
     return {
         "lfcc_similarity": round(max(lfcc_similarity * 100, 0), 1),
         "spectral_similarity": round(max(spectral_similarity * 100, 0), 1),
-        "spectrum_similarity": round(max(spectrum_similarity * 100, 0), 1),
+        "peak_structure_similarity": round(max(peak_structure_similarity * 100, 0), 1),
         "harmonic_similarity": round(max(harmonic_similarity * 100, 0), 1),
+        "envelope_similarity": round(max(envelope_similarity * 100, 0), 1),
+        "topk_similarity": round(max(topk_similarity * 100, 0), 1),
         "overall_similarity": round(overall_pct, 1),
         "conclusion": conclusion,
         "conclusion_detail": conclusion_detail,
-        "lfcc_a": lfcc_a_aligned,
-        "lfcc_b": lfcc_b_aligned,
+        "lfcc_a": lfcc_a,
+        "lfcc_b": lfcc_b,
         "sig_a": sig_a,
         "sig_b": sig_b,
+        "env_a": env_a,
+        "env_b": env_b,
         "target_sr": TARGET_SR,
         "len_a": len(a),
         "len_b": len(b),
         "duration_a": len(a) / TARGET_SR,
         "duration_b": len(b) / TARGET_SR,
         "filter_speech": filter_speech,
+        "low_energy_warning": low_energy_warning,
+        "confidence": round(confidence, 3),
+        "consistency_penalty": round(consistency_penalty, 3),
+        "conf_a": conf_a,
+        "conf_b": conf_b,
     }
 
 
@@ -1098,22 +1763,22 @@ def _compute_harmonic_similarity(peaks_a: list[dict], peaks_b: list[dict]) -> fl
     freqs_a = np.array([p["freq"] for p in peaks_a])
     freqs_b = np.array([p["freq"] for p in peaks_b])
 
-    # ── 第1层：频率匹配 ──
-    # 对 A 的每个峰，找 B 中频率最接近的峰，计算归一化差距
-    match_scores = []
-    for fa in freqs_a:
-        diffs = np.abs(freqs_b - fa)
-        min_diff = np.min(diffs)
-        # 容差设计：5% 相对容差 + 10Hz 绝对容差（取较大者）
-        # 相对容差适应高频峰（如 5000Hz ± 250Hz），
-        # 绝对容差适应低频峰（如 25Hz ± 10Hz 比用 5% 更合理）
-        tolerance = max(fa * 0.05, 10)
-        if min_diff < tolerance:
-            match_scores.append(1.0 - min_diff / tolerance)
-        else:
-            match_scores.append(0.0)
+    # ── 第1层：频率匹配（双向对称） ──
+    # 分别从 A→B 和 B→A 两个方向做匹配，取平均，
+    # 消除"峰多的一方遍历时多出无匹配峰"导致的不对称。
+    def _one_way_freq_match(src_freqs, tgt_freqs):
+        scores = []
+        for f in src_freqs:
+            min_diff = np.min(np.abs(tgt_freqs - f))
+            tolerance = max(f * 0.05, 10)
+            if min_diff < tolerance:
+                scores.append(1.0 - min_diff / tolerance)
+            else:
+                scores.append(0.0)
+        return float(np.mean(scores)) if scores else 0.0
 
-    freq_match = float(np.mean(match_scores)) if match_scores else 0.0
+    freq_match = (_one_way_freq_match(freqs_a, freqs_b)
+                  + _one_way_freq_match(freqs_b, freqs_a)) / 2
 
     # ── 第2层：谐波比匹配 ──
     # 谐波比 = 各峰频率 / 基频，例如 [1.0, 2.0, 3.0, 4.5]
@@ -1130,13 +1795,16 @@ def _compute_harmonic_similarity(peaks_a: list[dict], peaks_b: list[dict]) -> fl
 
     ratio_match = 0.0
     if ratio_a and ratio_b:
-        # 对 A 的每个谐波比，找 B 中最近的，容差 0.3
-        # 例如 A=2.0 vs B=2.1 → 差0.1，在容差内，得分 = 1-0.1/0.3 = 0.67
-        ratio_scores = []
-        for ra in ratio_a:
-            min_diff = min(abs(ra - rb) for rb in ratio_b)
-            ratio_scores.append(max(0, 1.0 - min_diff / 0.3))
-        ratio_match = float(np.mean(ratio_scores))
+        # 双向对称匹配：A→B 和 B→A 各算一次，取平均
+        def _one_way_ratio_match(src, tgt):
+            scores = []
+            for r in src:
+                min_diff = min(abs(r - rb) for rb in tgt)
+                scores.append(max(0, 1.0 - min_diff / 0.3))
+            return float(np.mean(scores)) if scores else 0.0
+
+        ratio_match = (_one_way_ratio_match(ratio_a, ratio_b)
+                       + _one_way_ratio_match(ratio_b, ratio_a)) / 2
 
     # 频率匹配 60% + 谐波比匹配 40%
     # 如果没有谐波比信息（单峰），退化为纯频率匹配
@@ -1381,12 +2049,14 @@ def plot_spectrum_overlay(feat_a: dict, feat_b: dict, name_a: str, name_b: str) 
 
 def plot_similarity_radar(comp: dict) -> go.Figure:
     """绘制多维度相似度雷达图"""
-    categories = ["LFCC 相似度", "频谱特征", "频谱形状", "谐波指纹", "综合相似度"]
+    categories = ["LFCC", "频谱特征", "峰结构", "谐波指纹", "包络谱", "异常帧", "综合相似度"]
     values = [
         comp["lfcc_similarity"],
         comp["spectral_similarity"],
-        comp["spectrum_similarity"],
+        comp["peak_structure_similarity"],
         comp["harmonic_similarity"],
+        comp["envelope_similarity"],
+        comp.get("topk_similarity", 0),
         comp["overall_similarity"],
     ]
 
@@ -1759,7 +2429,7 @@ def run_full_analysis(
     if progress:
         progress(55, "运行缺陷检测引擎...")
 
-    defects = detect_defects(magnitudes, freqs, peaks, rms_level, fft_size, sample_rate)
+    defects = detect_defects(magnitudes, freqs, peaks, rms_level, peak_level, fft_size, sample_rate)
     quality_score = compute_quality_score(rms_level, dynamic_range, defects)
     quality_grade = get_quality_grade(quality_score)
 
@@ -2055,14 +2725,15 @@ def main():
 
 ---
 
-**🧬 四维比对原理**
+**🧬 五维比对原理**
 
 | 维度 | 权重 | 比什么 | 通俗理解 |
 |------|------|--------|----------|
-| LFCC | 20% | 逐帧频率子带能量分布 | 逐段对比"频谱截图" |
-| 频谱特征 | 25% | 质心、带宽、平坦度等统计量 | 比对"整体体型指标" |
-| 频谱形状 | 25% | 归一化频谱曲线轮廓 | 比对"剪影轮廓" |
-| 谐波指纹 | 30% | 特征峰位置 + 谐波频率比 | 比对"DNA 条形码" |
+| LFCC | 15% | 增强统计分布（均值+分位数+协方差+Wasserstein） | 对比"全身体检报告" |
+| 频谱特征 | 20% | 质心、带宽、平坦度等统计量 | 比对"整体体型指标" |
+| 峰结构 | 20% | 峰间距比 + 倍频关系（抗频率漂移） | 比对"旋律音程关系" |
+| 谐波指纹 | 25% | 特征峰位置 + 谐波频率比 | 比对"DNA 条形码" |
+| 包络谱 | 20% | Hilbert 包络频谱（幅度调制节奏） | 比对"鼓点节奏" |
 
 ---
 
@@ -2070,10 +2741,10 @@ def main():
 
 | 范围 | 结论 | 含义 |
 |------|------|------|
-| ≥ 75% | 很可能同源 | 特征高度吻合，大概率是同一台设备 |
-| 55-75% | 可能同源 | 部分特征匹配，需结合其他信息判断 |
-| 35-55% | 不确定 | 特征差异较大，可能同型号不同个体 |
-| < 35% | 大概率不同源 | 特征几乎不匹配，不是同一设备 |
+| ≥ 75% | 高度同源 | 五维特征高度吻合，极大概率是同一台设备 |
+| 65-75% | 可能同源 | 多数特征匹配，需结合其他信息进一步判断 |
+| 45-65% | 相似度低 | 个别特征相似但整体差异大，大概率不同源 |
+| < 45% | 大概率不同源 | 四维特征差异显著，不是同一设备 |
 
 ---
 
@@ -2105,12 +2776,18 @@ def main():
                     st.error(f"❌ 比对失败: {e}")
 
         # ── 恢复上次比对结果（页面 rerun 时） ──
-        if st.session_state.get("comparison_result") and not compare_clicked:
-            render_comparison(
-                st.session_state.comparison_result,
-                st.session_state.get("comparison_name_a", ""),
-                st.session_state.get("comparison_name_b", ""),
-            )
+        _cached_comp = st.session_state.get("comparison_result")
+        if _cached_comp and not compare_clicked:
+            # 防御：旧版缓存可能缺少新字段，检测到则清除
+            _required_keys = ("peak_structure_similarity", "envelope_similarity", "confidence", "topk_similarity")
+            if any(k not in _cached_comp for k in _required_keys):
+                st.session_state.comparison_result = None
+            else:
+                render_comparison(
+                    _cached_comp,
+                    st.session_state.get("comparison_name_a", ""),
+                    st.session_state.get("comparison_name_b", ""),
+                )
 
 
 def render_results(result: dict):
@@ -2350,9 +3027,9 @@ def generate_comparison_report_html(comp: dict, name_a: str, name_b: str) -> str
     overall = comp["overall_similarity"]
     if overall >= 75:
         color, bg, icon = "#059669", "#ecfdf5", "✅"
-    elif overall >= 55:
+    elif overall >= 65:
         color, bg, icon = "#2563eb", "#eff6ff", "🔵"
-    elif overall >= 35:
+    elif overall >= 45:
         color, bg, icon = "#d97706", "#fffbeb", "🟡"
     else:
         color, bg, icon = "#dc2626", "#fef2f2", "🔴"
@@ -2426,7 +3103,20 @@ def generate_comparison_report_html(comp: dict, name_a: str, name_b: str) -> str
 
     speech_filter_note = ""
     if comp.get("filter_speech"):
-        speech_filter_note = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin:12px 0;color:#1e40af;font-size:13px;">🔊 已启用语音频带过滤（300-3400Hz），比对结果排除了人声干扰，专注于机械噪声特征。</div>'
+        speech_filter_note = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin:12px 0;color:#1e40af;font-size:13px;">🔊 已启用智能语音过滤——VAD 帧丢弃法：检测到语音的帧直接丢弃，只保留无语音帧计算特征，避免频域挖洞。</div>'
+
+    # 置信度提示
+    confidence = comp.get("confidence", 1.0)
+    conf_pct = f"{confidence:.0%}"
+    if confidence < 0.4:
+        conf_color, conf_note = "#dc2626", "极低——结论很可能不可靠，请勿以此做判断"
+    elif confidence < 0.6:
+        conf_color, conf_note = "#d97706", "偏低——结论仅供参考，建议补充更高质量的录音"
+    elif confidence < 0.8:
+        conf_color, conf_note = "#2563eb", "中等——有一定参考价值，建议结合实际工况综合判断"
+    else:
+        conf_color, conf_note = "#059669", "良好——音频条件满足比对要求，结论可靠度较高"
+    confidence_note = f'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin:12px 0;color:#475569;font-size:13px;">📊 置信度：<b style="color:{conf_color};">{conf_pct}</b> — {conf_note}</div>'
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -2445,7 +3135,7 @@ h2 {{ font-size:17px; color:#4f46e5; margin:28px 0 14px; border-left:3px solid #
 .card {{ background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:22px; margin-bottom:18px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }}
 .score-big {{ font-size:56px; font-weight:800; letter-spacing:-3px; line-height:1; }}
 .grade {{ font-size:24px; font-weight:700; }}
-.stat-grid {{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; margin-top:18px; }}
+.stat-grid {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:18px; }}
 .stat-item {{ background:#f8fafc; padding:16px; border-radius:10px; text-align:center; border:1px solid #f1f5f9; }}
 .stat-label {{ font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }}
 .stat-value {{ font-size:20px; color:#0f172a; font-weight:700; }}
@@ -2468,6 +3158,8 @@ td {{ padding:10px 14px; border-bottom:1px solid #f1f5f9; }}
 
 {speech_filter_note}
 
+{confidence_note}
+
 <div class="card" style="background:{bg};border-color:{color}30;">
 <h2 style="color:{color};border-color:{color};">🎯 比对结论</h2>
 <div style="text-align:center;padding:18px 0;">
@@ -2481,39 +3173,51 @@ td {{ padding:10px 14px; border-bottom:1px solid #f1f5f9; }}
 <h2>📊 特征相似度得分</h2>
 <div class="stat-grid">
     <div class="stat-item">
-        <div class="stat-label">LFCC 相似度</div>
+        <div class="stat-label">LFCC</div>
         <div class="stat-value">{comp['lfcc_similarity']}%</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 20%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 15%</div>
     </div>
     <div class="stat-item">
         <div class="stat-label">频谱特征</div>
         <div class="stat-value">{comp['spectral_similarity']}%</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 25%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 15%（PCEN 补偿）</div>
     </div>
     <div class="stat-item">
-        <div class="stat-label">频谱形状</div>
-        <div class="stat-value">{comp['spectrum_similarity']}%</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 25%</div>
+        <div class="stat-label">峰结构</div>
+        <div class="stat-value">{comp['peak_structure_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 20%</div>
     </div>
     <div class="stat-item">
         <div class="stat-label">谐波指纹</div>
         <div class="stat-value" style="color:{color};">{comp['harmonic_similarity']}%</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 30%（核心）</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 25%（核心）</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">包络谱</div>
+        <div class="stat-value">{comp['envelope_similarity']}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 15%（3-150Hz 峰匹配）</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">异常帧</div>
+        <div class="stat-value">{comp.get('topk_similarity', 0)}%</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px;">权重 10%</div>
     </div>
 </div>
 <div class="tip">
-<b>📖 四项指标通俗解读：</b><br>
-🔸 <b>LFCC 相似度</b>：像"逐段对比两首歌的频谱截图"——每帧切一小段，看各频率子带能量分布像不像。全频段等权重，不偏向人声。<br>
-🔸 <b>频谱特征</b>：像"比较两个人的身高、体重、BMI"——不看细节，只比对几个整体统计量（能量重心在哪、频率分布有多宽/多平）。<br>
-🔸 <b>频谱形状</b>：像"比较两张剪影的轮廓"——忽略谁响谁轻，只看频率分布的"形状"像不像。<br>
-🔸 <b>谐波指纹</b>：权重最高（30%）。像"DNA 条形码比对"——每台设备有独特的特征频率组合，不管录音条件怎么变，比例不变。
+<b>📖 六项指标通俗解读：</b><br>
+🔸 <b>LFCC</b>（15%）：增强统计分布比对——均值+标准差+分位数+协方差结构+Wasserstein距离。<br>
+🔸 <b>频谱特征</b>（15%）：PCEN 补偿后子带能量+质心+带宽+平坦度比对，消除录音距离影响。<br>
+🔸 <b>峰结构</b>（20%）：抗频率漂移——比较峰间距比和倍频关系，即使转速差3%也能识别同源。<br>
+🔸 <b>谐波指纹</b>（25%）：权重最高。DNA 条形码比对——每台设备有独特的特征频率组合。<br>
+🔸 <b>包络谱</b>（15%）：3-150Hz 包络峰匹配为主，捕捉转频、轴承缺陷等低频调制特征。<br>
+🔸 <b>异常帧</b>（10%）：Top-K 异常帧比对——提取最响/最尖锐/最高频的帧单独比较，捕捉关键异响。
 </div>
 </div>
 
 <div class="card">
 <h2>🎯 相似度雷达图</h2>
 {radar_html}
-<div class="tip"><b>💡 阅读方法：</b>五个轴代表五个比对维度，蓝色多边形越"大"越"圆"→ 两段音频越相似。谐波指纹轴突出说明特征频率匹配好。</div>
+<div class="tip"><b>💡 阅读方法：</b>六个轴代表六个比对维度，蓝色多边形越"大"越"圆"→ 两段音频越相似。谐波指纹轴突出说明特征频率匹配好。</div>
 </div>
 
 <div class="card">
@@ -2606,10 +3310,10 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
     if overall >= 75:
         color, bg = "#059669", "#ecfdf5"
         icon = "✅"
-    elif overall >= 55:
+    elif overall >= 65:
         color, bg = "#2563eb", "#eff6ff"
         icon = "🔵"
-    elif overall >= 35:
+    elif overall >= 45:
         color, bg = "#d97706", "#fffbeb"
         icon = "🟡"
     else:
@@ -2633,7 +3337,25 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
 
     # ── 语音过滤提示 ──
     if comp.get("filter_speech"):
-        st.info("🔊 已启用语音频带过滤（300-3400Hz），比对结果排除了人声干扰，专注于机械噪声特征。")
+        if comp.get("low_energy_warning"):
+            st.warning(
+                "⚠️ 语音频带过滤后剩余能量极低（语音频带占原始信号 99% 以上）。"
+                "滤波后信号主要是噪声底噪，归一化后不同音频可能呈现虚假高相似度。"
+                "建议关闭语音频带过滤，或使用包含更多机械噪声成分的音频。"
+            )
+        else:
+            st.info("🔊 已启用智能语音过滤——检测到语音的帧直接丢弃（VAD 帧丢弃法），只保留无语音帧进行特征计算，避免频域挖洞导致的信息损失。")
+
+    # ── 置信度提示 ──
+    confidence = comp.get("confidence", 1.0)
+    if confidence < 0.4:
+        st.error(f"🔴 置信度极低 ({confidence:.0%})——音频质量/时长/信噪比严重不足，结论很可能不可靠，请勿以此做判断。")
+    elif confidence < 0.6:
+        st.warning(f"🟡 置信度偏低 ({confidence:.0%})——音频条件欠佳，结论仅供参考，建议补充更高质量的录音再比对。")
+    elif confidence < 0.8:
+        st.info(f"🔵 置信度中等 ({confidence:.0%})——结论有一定参考价值，但建议结合实际工况综合判断。")
+    else:
+        st.success(f"🟢 置信度良好 ({confidence:.0%})——音频条件满足比对要求，结论可靠度较高。")
 
     # ── 分项指标 ──
     st.markdown("""
@@ -2641,29 +3363,37 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
         padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
         <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>📋 特征相似度得分</div>
     """, unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
-        st.metric("LFCC 相似度", f"{comp['lfcc_similarity']}%",
-                  help="线性频率倒谱系数 — 把整段音频拆成等间隔频率子带，逐帧比较各子带能量分布的相似程度。全频段等权重，不偏向人声频段，适合机械噪声。")
+        st.metric("LFCC", f"{comp['lfcc_similarity']}%",
+                  help="增强统计分布比对：均值+标准差+分位数+协方差结构+Wasserstein距离。全频段等权重，适合机械噪声。")
     with c2:
         st.metric("频谱特征", f"{comp['spectral_similarity']}%",
-                  help="子带能量、质心、带宽、平坦度等'整体统计量'的比对 — 像比较两个人的身高体重，而非逐像素比照片。")
+                  help="PCEN 倾斜补偿后的子带能量+质心+带宽+平坦度比对 — 消除录音距离对频谱倾斜的影响。")
     with c3:
-        st.metric("频谱形状", f"{comp['spectrum_similarity']}%",
-                  help="归一化频谱曲线的形状匹配 — 忽略绝对响度差异，只看'频率分布的轮廓'像不像。录音音量不同不影响此指标。")
+        st.metric("峰结构", f"{comp['peak_structure_similarity']}%",
+                  help="抗频率漂移的峰间距比+倍频关系比对 — 即使同型电机转速差3%，峰结构仍高度相似。")
     with c4:
         st.metric("谐波指纹", f"{comp['harmonic_similarity']}%",
-                  help="特征频率峰的匹配 + 谐波频率比结构比对 — 最核心的指标，类似 DNA 比对，即使两段录音转速不同也能识别同源设备。")
+                  help="特征频率峰的匹配 + 谐波频率比结构比对 — 核心指标，类似 DNA 比对，即使两段录音转速不同也能识别同源设备。")
+    with c5:
+        st.metric("包络谱", f"{comp['envelope_similarity']}%",
+                  help="3-150Hz 包络峰匹配（70%）+ 曲线相似度（30%）— 捕捉转频、轴承缺陷频率等低频调制特征。")
+    with c6:
+        st.metric("异常帧", f"{comp.get('topk_similarity', 0)}%",
+                  help="Top-K 异常帧比对——提取 RMS/谱峭度/高频能量最高的帧单独比较，捕捉关键异响而非只看全局平均。")
     st.markdown("</div>", unsafe_allow_html=True)  # 关闭指标卡片
 
     # ── 分项指标通俗解读 ──
     st.markdown("""
 <div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;margin:8px 0 16px;color:#475569;font-size:13px;line-height:1.8;'>
-<b>📖 四项指标通俗解读：</b><br>
-🔸 <b>LFCC 相似度</b>：像"逐段对比两首歌的频谱截图"——每帧切一小段，看各频率子带能量分布像不像。全频段等权重，不偏向人声。<br>
-🔸 <b>频谱特征</b>：像"比较两个人的身高、体重、BMI"——不看细节，只比对几个整体统计量（能量重心在哪、频率分布有多宽/多平）。<br>
-🔸 <b>频谱形状</b>：像"比较两张剪影的轮廓"——忽略谁响谁轻，只看频率分布的"形状"像不像。即使音量不同也不影响。<br>
-🔸 <b>谐波指纹</b>：权重最高（30%）。像"DNA 条形码比对"——每台设备有独特的特征频率组合（峰值的间距比例），不管录音条件怎么变，比例不变。
+<b>📖 六项指标通俗解读：</b><br>
+🔸 <b>LFCC</b>（15%）：像"对比两个人的全身体检报告"——不只看平均指标，还看波动范围、上下限、指标间关联性。<br>
+🔸 <b>频谱特征</b>（15%）：PCEN 补偿后比对子带能量、质心等 — 消除近场/远场导致的频谱倾斜差异。<br>
+🔸 <b>峰结构</b>（20%）：像"对比两段旋律的音程关系"——不管整体偏高偏低，只要音符间距模式一样就算相似。<br>
+🔸 <b>谐波指纹</b>（25%）：权重最高。像"DNA 条形码比对"——每台设备有独特的特征频率组合。<br>
+🔸 <b>包络谱</b>（15%）：像"对比两首歌的鼓点节奏"——看 3-150Hz 调制峰结构是否一致，而非整体曲线形状。<br>
+🔸 <b>异常帧</b>（10%）：像"专门比较最响/最尖锐的瞬间"——捕捉全局平均会淹没的关键异响。
 </div>
     """, unsafe_allow_html=True)
 
@@ -2731,7 +3461,7 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
         st.caption("多维度噪声指纹相似度雷达图 — 越接近外圈表示越相似")
         st.markdown("""
 <div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-top:4px;color:#475569;font-size:13px;line-height:1.7;'>
-<b>💡 如何看雷达图：</b>五个轴代表五个比对维度，蓝色多边形越"大"越"圆"→ 两段音频越相似。<br>
+<b>💡 如何看雷达图：</b>六个轴代表六个比对维度，蓝色多边形越"大"越"圆"→ 两段音频越相似。<br>
 • 谐波指纹的"尖角"突出 → 特征频率匹配好，大概率是同源设备<br>
 • 某轴明显内缩 → 该维度差异大，需关注具体原因（如录音环境/传感器不同）
 </div>
@@ -2763,7 +3493,7 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
 <div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-top:4px;color:#475569;font-size:13px;line-height:1.7;'>
 <b>💡 如何看频谱叠加图：</b>两条曲线越重合 → 频率分布越相似。<br>
 • 峰值位置对齐 → 特征频率一致，说明可能来自同型号或同台设备<br>
-• 曲线高度不同但形状相似 → 仅音量差异，"频谱形状"指标仍会较高<br>
+• 曲线高度不同但形状相似 → 仅音量差异，"峰结构"指标仍会较高（抗漂移）<br>
 • 完全不重合 → 两段音频的噪声来源几乎不同
 </div>
         """, unsafe_allow_html=True)
