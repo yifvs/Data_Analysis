@@ -1134,10 +1134,17 @@ def main():
     """, unsafe_allow_html=True)
 
     # ════════════════════ 文件上传区 ════════════════════
+    st.markdown(
+        '<p style="color:#d97706;font-size:13px;margin-bottom:2px;">'
+        '💡 若上传 MP4 等视频格式，建议先前往 '
+        '<a href="https://online-audio-converter.com" target="_blank" style="color:#4f46e5;text-decoration:underline;">'
+        'online-audio-converter.com</a> 转换为 WAV 格式后再上传，分析效果更佳。</p>',
+        unsafe_allow_html=True,
+    )    
     uploaded_file = st.file_uploader(
         "**拖拽或点击上传**",
         type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
-        help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A / MP4，最大 50MB",
+        help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A，最大 50MB",
     )
 
     # 操作按钮行
