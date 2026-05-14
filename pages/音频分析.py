@@ -37,147 +37,79 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# # ── 现代浅色主题（干净明亮 + 圆角卡片 + 精致阴影）──
-# st.markdown("""<style>
-# @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-# * { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
+# ── 现代浅色主题（干净明亮 + 圆角卡片 + 精致阴影）──
+st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
 
-# .stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
-# .main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
-# .stAppDeployButton { display:none !important; }
+.stApp { background:#f8fafc !important; min-height:100vh; overflow:visible !important; }
+.main > div { padding:2rem 3rem !important; max-width:1100px !important; margin:0 auto !important; overflow:visible !important; }
+.stAppDeployButton { display:none !important; }
 
-# .css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
-# .css-154b5vr { padding:24px 16px 12px !important; }
-# .css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
-# h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
-# h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
-# p { color:#475569 !important; line-height:1.7 !important; }
+.css-1lcbxhc { background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%) !important; border-right:1px solid #e2e8f0 !important; }
+.css-154b5vr { padding:24px 16px 12px !important; }
+.css-154bvr h3,.css-154bvr label { color:#1e293b !important; font-weight:600 !important; }
+h1 { color:#0f172a !important; font-weight:800 !important; letter-spacing:-0.6px !important; }
+h2 { color:#4f46e5 !important; font-weight:700 !important; margin-top:32px !important; }
+p { color:#475569 !important; line-height:1.7 !important; }
 
-# .stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
-# .stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
-# .stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
-# /* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
-# .stFileUploader span[data-testid="stMarkdownContainer"],
-# .stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
-# .stFileUploader div[data-testid="stCaptionContainer"] + div,
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
-# .stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
+.stFileUploader { background:#fff !important; border:2px dashed #cbd5e1 !important; border-radius:16px !important; padding:36px 20px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.25s; }
+.stFileUploader:hover { border-color:#818cf8 !important; background:#fafbff !important; box-shadow:0 4px 12px rgba(99,102,241,0.10) !important; }
+.stFileUploader > label { color:#64748b !important; font-size:15px !important; font-weight:500 !important; }
+/* 云端环境隐藏 uploader 内部重复文字，避免与自定义 label 重叠 */
+.stFileUploader span[data-testid="stMarkdownContainer"],
+.stFileUploader .stFileUploaderDropContainer > span:not(:first-child):not([data-baseweb="visually-hidden"]),
+.stFileUploader div[data-testid="stCaptionContainer"] + div,
+.stFileUploader [data-baseweb="file-uploader"] > div:first-child > span:nth-of-type(2),
+.stFileUploader [data-testid="stFileUploaderDropzoneInstructions"] { display:none !important; }
 
-# .stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
-# .stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
+.stTextInput input,.stTextArea textarea { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; color:#0f172a !important; border-radius:11px !important; padding:10px 14px !important; transition:all 0.2s; }
+.stTextInput:focus-within input,.stTextArea:focus-within textarea { border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.08) !important; }
 
-# .stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
-# .stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
-# .stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
-# .stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
-# .stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
+.stButton button { border-radius:11px !important; font-weight:600 !important; font-size:14px !important; padding:9px 22px !important; transition:all 0.2s ease !important; }
+.stButton > button[kind='primary'] { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important; border:none !important; color:#fff !important; box-shadow:0 3px 10px rgba(79,70,229,0.28) !important; }
+.stButton > button[kind='primary']:hover { transform:translateY(-1px) !important; box-shadow:0 5px 18px rgba(79,70,229,0.38) !important; }
+.stButton > button:not([kind='primary']) { background:#fff !important; border:1.5px solid #e2e8f0 !important; color:#334155 !important; }
+.stButton > button:not([kind='primary']):hover { background:#f8fafc !important; border-color:#a5b4fc !important; }
 
-# .stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
-# @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-# .stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
-# .stProgress { margin-bottom:8px !important; }
-# [data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
+.stProgress div[role='progressbar'] { height:7px !important; border-radius:999px !important; background:linear-gradient(90deg,#4f46e5,#a78bfa,#4f46e5) !important; background-size:200% 100% !important; animation:shimmer 2s infinite linear !important; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.stProgress div > div:first-child { height:7px !important; border-radius:999px !important; background:#e2e8f0; }
+.stProgress { margin-bottom:8px !important; }
+[data-testid="stStatusWidget"], [data-testid="stAlert"] { overflow:visible !important; }
 
-# .stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
-# .stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
-# .stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
-# .stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
+.stTabs [role='tablist'] { gap:4px !important; background:#f1f5f9 !important; border-radius:11px !important; padding:5px !important; }
+.stTabs [role='tab'] { border-radius:8px !important; font-weight:500 !important; font-size:13px !important; color:#64748b !important; transition:all 0.2s !important; }
+.stTabs [role='tab'][aria-selected='true'] { background:#fff !important; color:#4f46e5 !important; box-shadow:0 1px 4px rgba(0,0,0,0.08) !important; }
+.stTabs [aria-selected='false']:hover { color:#334155 !important; background:#e2e8f0 !important; }
 
-# .stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-# .stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
-# .stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
-# .stDataFrame table tr:hover td { background:#fafbff !important; }
+.stDataFrame { border-radius:12px !important; overflow:hidden !important; background:#fff !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+.stDataFrame table thead th { background:#f8fafc !important; color:#475569 !important; font-weight:600 !important; font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.4px !important; padding:11px 16px !important; border-bottom:2px solid #e2e8f0 !important; }
+.stDataFrame table td { color:#1e293b !important; font-size:13px !important; padding:10px 16px !important; border-bottom:1px solid #f1f5f9 !important; }
+.stDataFrame table tr:hover td { background:#fafbff !important; }
 
-# .stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-# .stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
-# .stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
+.stMetric { background:#fff !important; border:1px solid #e2e8f0 !important; border-radius:14px !important; padding:18px 14px !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.stMetric label { color:#94a3b8 !important; font-size:12px !important; font-weight:600 !important; text-transform:uppercase !important; }
+.stMetric div[data-testid='stMetricValue'] { color:#0f172a !important; font-weight:700 !important; font-size:20px !important; }
 
-# .stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-# .stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
+.stExpander { border:1px solid #e2e8f0 !important; border-radius:14px !important; background:#fff !important; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.stExpander > summary { color:#4f46e5 !important; font-weight:600 !important; font-size:14px !important; }
 
-# .stCaption { color:#94a3b8 !important; font-size:12px !important; }
-# hr, hr + * { display:none !important; }
-# .stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
-# .stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
-# .stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-# .stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
-# .stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
-# .stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stCaption { color:#94a3b8 !important; font-size:12px !important; }
+hr, hr + * { display:none !important; }
+.stInfo { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:12px !important; padding:16px 20px !important; }
+.stInfo p,.stInfo span { color:#2563eb !important; font-size:15px !important; }
+.stSuccess { background:#ecfdf5 !important; border:1px solid #a7f3d0 !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stSuccess p, .stSuccess span { color:#059669 !important; font-size:16px !important; font-weight:700 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stWarning { background:#fffbeb !important; border:1px solid #fde68a !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stWarning p, .stWarning span { color:#d97706 !important; font-size:16px !important; font-weight:600 !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
+.stError { background:#fef2f2 !important; border:1px solid #fecaca !important; border-radius:12px !important; margin:16px 0 !important; padding:18px 20px !important; min-height:52px !important; height:auto !important; box-sizing:border-box !important; overflow:visible !important; }
+.stError p, .stError span { color:#dc2626 !important; font-size:15px !important; line-height:1.6 !important; white-space:normal !important; word-break:break-word !important; display:block !important; }
 
-# /* 强制状态消息容器不被裁剪 */
-# div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
-# [data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
-# /* ═════════════════  云端环境 Material Icon 泄露文本修复  ═════════════════
-#    根因：云端环境 Material Icons 字体未加载，icon ligature 文本泄露为可见文字。
-#    三处泄露：① Uploader 内 "upload"  ② Expander 内 "_arrow"  ③ Sidebar 内 "keyboard_double_..."
-#    治本：引入 Google Fonts Material Icons   治标：对三处容器做核弹级隐藏 */
-
-# /* A. @import Material Icons 字体（治本：让 ligature 渲染为图标而非文本） */
-# @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-# @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
-
-# /* B1. FileUploader: 核弹级隐藏内部按钮（upload 泄露源），恢复上传区域 */
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child,
-# .stFileUploader [data-baseweb="file-uploader"] > div:first-child > *,
-# .stFileUploader [data-baseweb="file-uploader"] button,
-# .stFileUploader [data-baseweb="file-uploader"] button *,
-# .stFileUploader [role="button"]:not(.stFileUploaderDropContainer) {
-#   font-size: 0 !important;
-#   line-height: 0 !important;
-#   height: auto !important;
-#   min-height: 0 !important;
-#   padding: 0 !important;
-#   margin: 0 !important;
-#   overflow: hidden !important;
-#   visibility: hidden !important;
-#   display: none !important;
-# }
-# /* 但恢复上传区域本身的可见性 */
-# .stFileUploader .stFileUploaderDropContainer,
-# .stFileUploader .stFileUploaderDropContainer * {
-#   font-size: inherit !important;
-#   line-height: inherit !important;
-#   visibility: visible !important;
-#   display: block !important;
-#   overflow: visible !important;
-# }
-
-# /* B2. Expander: summary 中除第一个子元素外全部隐藏（_arrow 泄露源） */
-# .stExpander > summary > :not(:first-child),
-# .stExpander > summary > :not(:first-child) * {
-#   display: none !important;
-#   font-size: 0 !important;
-#   width: 0 !important;
-#   height: 0 !important;
-#   overflow: hidden !important;
-# }
-
-# /* B3. Sidebar 导航：隐藏所有非首项的次要文字（keyboard_double_ 泄露源） */
-# .stSidebarNav [class*="MenuItems"] span:not(:first-child),
-# .stSidebarNav button span:not(:first-child),
-# .stSidebarNav a span:not(:first-child),
-# .stSidebarNav div[data-testid*="navitem"] span:nth-child(n+2),
-# .stSidebarNav [class*="element-container"] span:empty,
-# .stSidebarNav [class*="container"] span[aria-hidden],
-# .stApp [class*="sidebar"] svg + span,
-# .stApp [class*="sidebar"] span:has(+ svg) {
-#   display: none !important;
-#   font-size: 0 !important;
-#   width: 0 !important;
-#   overflow: hidden !important;
-# }
-
-# /* B4. 全局兜底：所有含 aria-hidden 或空内容的可疑 span */
-# .stApp span[aria-hidden="true"],
-# .stApp span:empty:not([data-testid]),
-# button span[aria-hidden],
-# label span[aria-hidden] {
-#   display: none !important;
-#   font-size: 0 !important;
-# }
-# </style>""", unsafe_allow_html=True)
+/* 强制状态消息容器不被裁剪 */
+div[data-testid="stStatusWidget"] { min-height:auto !important; max-height:none !important; height:auto !important; overflow:visible !important; }
+[data-testid="stAlertContainer"] > div { height:auto !important; min-height:auto !important; max-height:none !important; overflow:visible !important; }
+</style>""", unsafe_allow_html=True)
 
 
 # 初始化 session_state
@@ -1932,6 +1864,8 @@ def main():
             st.session_state.analysis_result = None
             st.session_state.uploaded_file = None
             st.session_state.analysis_history = []
+            st.session_state.comparison_result = None
+            st.session_state.comp_report_html = None
             st.success("缓存已清除!")
             st.rerun()
 
@@ -1939,127 +1873,180 @@ def main():
         st.markdown("""<details>
 <summary style='cursor:pointer;color:#94a3b8;font-size:13px;font-weight:500;'>&#x2139; 使用说明</summary>
 <div style='padding:10px 4px;color:#64748b;font-size:13px;line-height:2;'>
-1. 上传音频文件<br/>
-2. 点击「开始分析」按钮<br/>
-3. 查看图表与诊断结果<br/>
-4. 下载完整 HTML 报告<br/><br/>
+1. 选择功能标签页（单音频分析 / 双音频比对）<br/>
+2. 上传音频文件<br/>
+3. 点击操作按钮<br/>
+4. 查看结果与可视化图表<br/>
+5. 下载 HTML 报告<br/><br/>
 <b>支持格式:</b> WAV / MP3 / OGG / FLAC / AAC / M4A / MP4<br/>
 <b>文件大小:</b> 最大 50 MB
 </div></details>""", unsafe_allow_html=True)
 
     # ════════════════════ 主区域 Header ════════════════════
     st.markdown("""
-    <div style='text-align:center;padding:28px 0 12px;'>
-        <h1 style='font-size:32px;margin-bottom:6px;color:#0f172a;'>
-            音频频谱分析系统
+    <div style='text-align:center;padding:18px 0 4px;'>
+        <h1 style='font-size:28px;margin-bottom:4px;color:#0f172a;letter-spacing:-0.5px;'>
+            🎵 音频频谱分析系统
         </h1>
-        <p style='color:#94a3b8;font-size:14px;letter-spacing:0.3px;'>
-            STFT &middot; FFT &middot; 缺陷检测 &middot; AI 智能诊断 &middot; 一键导出
+        <p style='color:#94a3b8;font-size:13px;letter-spacing:0.3px;'>
+            STFT &middot; FFT &middot; 缺陷检测 &middot; 噪声指纹比对 &middot; AI 诊断 &middot; 一键导出
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    # ════════════════════ 文件上传区 ════════════════════
-    st.markdown(
-        '<p style="color:#d97706;font-size:13px;margin-bottom:2px;">'
-        '💡 若上传 MP4 等视频格式，建议先前往 '
-        '<a href="https://online-audio-converter.com" target="_blank" style="color:#4f46e5;text-decoration:underline;">'
-        'online-audio-converter.com</a> 转换为 WAV 格式后再上传，分析效果更佳。</p>',
-        unsafe_allow_html=True,
-    )
-    uploaded_file = st.file_uploader(
-        "**拖拽或点击上传**",
-        type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
-        help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A，最大 50MB",
-    )
+    # ════════════════════ 主 Tab 导航 ════════════════════
+    tab_analyze, tab_compare = st.tabs(["📊 单音频分析", "🔗 双音频比对"])
 
-    # 操作按钮行
-    c_left, c_right = st.columns([1.2, 3])
+    # ════════════════════ Tab 1：单音频分析 ════════════════════
+    with tab_analyze:
+        # ── 上传区卡片 ──
+        st.markdown("""
+        <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+            padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+            <div style='display:flex;align-items:center;gap:8px;margin-bottom:12px;'>
+                <span style='font-size:20px;'>📤</span>
+                <span style='font-size:16px;font-weight:700;color:#0f172a;'>上传音频文件</span>
+            </div>
+        """, unsafe_allow_html=True)
 
-    with c_left:
-        analyze_clicked = st.button(
-            "▶  开始分析",
-            type="primary",
-            use_container_width=True,
-            disabled=not uploaded_file,
+        st.markdown(
+            '<p style="color:#d97706;font-size:13px;margin-bottom:2px;">'
+            '💡 若上传 MP4 等视频格式，建议先前往 '
+            '<a href="https://online-audio-converter.com" target="_blank" style="color:#4f46e5;text-decoration:underline;">'
+            'online-audio-converter.com</a> 转换为 WAV 格式后再上传，分析效果更佳。</p>',
+            unsafe_allow_html=True,
+        )
+        uploaded_file = st.file_uploader(
+            "**拖拽或点击上传**",
+            type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
+            help="支持 MP3 / WAV / OGG / FLAC / AAC / M4A，最大 50MB",
         )
 
-    with c_right:
-        _has_result = bool(st.session_state.analysis_result)
-        # 预生成报告内容（点击时才生成，避免每次 rerun 都计算）
-        if _has_result:
-            result = st.session_state.analysis_result
-            if not result.get("report_html"):
-                with st.spinner("正在生成 HTML 报告..."):
-                    result["report_html"] = generate_report_html(result)
-            safe_name = (
-                re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(result["file_name"]).stem)
-                + "_音频分析报告_"
-                + datetime.now().strftime("%Y%m%d_%H%M%S")
-                + ".html"
-            )
-            st.download_button(
-                label="⬇  导出 HTML 报告",
-                data=result["report_html"].encode("utf-8"),
-                file_name=safe_name,
-                mime="text/html;charset=utf-8",
-                use_container_width=True,
+        # 操作按钮行
+        c_left, c_right = st.columns([1.2, 3])
+
+        with c_left:
+            analyze_clicked = st.button(
+                "▶  开始分析",
                 type="primary",
+                use_container_width=True,
+                disabled=not uploaded_file,
             )
-        else:
-            st.button("⬇  导出 HTML 报告", disabled=True, use_container_width=True)
 
-    # ── 执行分析 ──
-    if analyze_clicked and uploaded_file:
-        file_bytes = uploaded_file.getvalue()
-        file_name = uploaded_file.name
+        with c_right:
+            _has_result = bool(st.session_state.analysis_result)
+            if _has_result:
+                result = st.session_state.analysis_result
+                if not result.get("report_html"):
+                    with st.spinner("正在生成 HTML 报告..."):
+                        result["report_html"] = generate_report_html(result)
+                safe_name = (
+                    re.sub(r"[^\w\u4e00-\u9fff_-]", "_", Path(result["file_name"]).stem)
+                    + "_音频分析报告_"
+                    + datetime.now().strftime("%Y%m%d_%H%M%S")
+                    + ".html"
+                )
+                st.download_button(
+                    label="⬇  导出 HTML 报告",
+                    data=result["report_html"].encode("utf-8"),
+                    file_name=safe_name,
+                    mime="text/html;charset=utf-8",
+                    use_container_width=True,
+                    type="primary",
+                )
+            else:
+                st.button("⬇  导出 HTML 报告", disabled=True, use_container_width=True)
 
-        progress_bar = st.progress(0, "准备分析...")
-        status = st.empty()
+        st.markdown("</div>", unsafe_allow_html=True)  # 关闭上传区卡片
 
-        def on_progress(pct, msg):
-            progress_bar.progress(int(pct), msg)
+        # ── 执行分析 ──
+        if analyze_clicked and uploaded_file:
+            file_bytes = uploaded_file.getvalue()
+            file_name = uploaded_file.name
 
-        try:
-            result = run_full_analysis(file_bytes, file_name, api_key.strip(), on_progress)
-            st.session_state.analysis_result = result
-            st.session_state.uploaded_file = uploaded_file
-            # 记录历史
-            history_entry = {
-                "name": file_name,
-                "size": len(file_bytes),
-                "time": datetime.now().strftime("%H:%M:%S"),
-                "score": result["quality_score"],
-                "grade": result["quality_grade"],
-            }
-            st.session_state.analysis_history.insert(0, history_entry)
-            st.session_state.analysis_history = st.session_state.analysis_history[:20]
+            progress_bar = st.progress(0, "准备分析...")
+            status = st.empty()
 
-            progress_bar.empty()
-            status.success("✅ 分析完成！向下滚动查看详细结果")
-        except Exception as e:
-            status.error(f"❌ 分析失败: {e}")
-            st.exception(e)
+            def on_progress(pct, msg):
+                progress_bar.progress(int(pct), msg)
 
-    # ── 结果展示区 ──
-    result = st.session_state.analysis_result
-    if result:
-        # 检测旧版 matplotlib 缓存（base64 字符串 vs 新版 plotly Figure）
-        _old_keys = ("waveform_img", "spectrum_img", "spectrogram_img")
-        if any(_k in result for _k in _old_keys) and "waveform_fig" not in result:
-            # 旧格式不兼容，清除缓存提示重新分析
-            st.session_state.analysis_result = None
-            st.warning("⚠️ 检测到旧版本分析结果缓存，请重新上传文件并分析")
-        else:
-            render_results(result)
+            try:
+                result = run_full_analysis(file_bytes, file_name, api_key.strip(), on_progress)
+                st.session_state.analysis_result = result
+                st.session_state.uploaded_file = uploaded_file
+                # 记录历史
+                history_entry = {
+                    "name": file_name,
+                    "size": len(file_bytes),
+                    "time": datetime.now().strftime("%H:%M:%S"),
+                    "score": result["quality_score"],
+                    "grade": result["quality_grade"],
+                }
+                st.session_state.analysis_history.insert(0, history_entry)
+                st.session_state.analysis_history = st.session_state.analysis_history[:20]
 
-    # ════════════════════ 音频噪声指纹比对 ════════════════════
-    st.markdown("---")
-    st.subheader("🔗  音频噪声指纹比对")
-    st.caption("上传两段音频，提取 LFCC / 频谱特征 / 谐波指纹，判断是否来自同一噪声源")
+                progress_bar.empty()
+                status.success("✅ 分析完成！向下滚动查看详细结果")
+            except Exception as e:
+                status.error(f"❌ 分析失败: {e}")
+                st.exception(e)
 
-    with st.expander("📖 噪声指纹比对入门 — 什么是'同源'？", expanded=False):
+        # ── 结果展示区 ──
+        result = st.session_state.analysis_result
+        if result:
+            _old_keys = ("waveform_img", "spectrum_img", "spectrogram_img")
+            if any(_k in result for _k in _old_keys) and "waveform_fig" not in result:
+                st.session_state.analysis_result = None
+                st.warning("⚠️ 检测到旧版本分析结果缓存，请重新上传文件并分析")
+            else:
+                render_results(result)
+
+    # ════════════════════ Tab 2：双音频比对 ════════════════════
+    with tab_compare:
+        # ── 上传区卡片 ──
         st.markdown("""
+        <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+            padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+            <div style='display:flex;align-items:center;gap:8px;margin-bottom:12px;'>
+                <span style='font-size:20px;'>📤</span>
+                <span style='font-size:16px;font-weight:700;color:#0f172a;'>上传两段音频进行比对</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+        comp_col1, comp_col2 = st.columns(2)
+        with comp_col1:
+            file_a = st.file_uploader(
+                "🎵 音频 A",
+                key="compare_file_a",
+                type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
+            )
+        with comp_col2:
+            file_b = st.file_uploader(
+                "🎵 音频 B",
+                key="compare_file_b",
+                type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
+            )
+
+        # 语音过滤选项
+        filter_speech = st.checkbox(
+            "🔇 过滤语音频带（300-3400Hz）",
+            value=False,
+            help="勾选后会去除人声频段的能量，使比对更专注于机械噪声特征。适合音频中混有人声干扰的场景。",
+        )
+
+        # 比对按钮
+        compare_clicked = st.button(
+            "🔬  开始比对",
+            type="primary",
+            use_container_width=True,
+            disabled=not (file_a and file_b),
+        )
+
+        st.markdown("</div>", unsafe_allow_html=True)  # 关闭上传区卡片
+
+        # ── 知识小贴士 ──
+        with st.expander("📖 噪声指纹比对入门 — 什么是'同源'？", expanded=False):
+            st.markdown("""
 **🔍 什么叫做"来自同一噪声源"？**
 
 同一台电机在不同时间、不同距离录制的声音，虽然听起来有差别（远近不同、环境噪声不同），
@@ -2097,66 +2084,60 @@ def main():
 使结果更专注于机械噪声本身。如果音频中没有人声，则无需开启。
         """)
 
-    comp_col1, comp_col2 = st.columns(2)
-    with comp_col1:
-        file_a = st.file_uploader(
-            "音频 A",
-            key="compare_file_a",
-            type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
-        )
-    with comp_col2:
-        file_b = st.file_uploader(
-            "音频 B",
-            key="compare_file_b",
-            type=["wav", "mp3", "ogg", "flac", "aac", "m4a", "mp4"],
-        )
+        # ── 执行比对 ──
+        if compare_clicked and file_a and file_b:
+            with st.spinner("正在提取噪声指纹并计算相似度..."):
+                try:
+                    bytes_a, bytes_b = file_a.getvalue(), file_b.getvalue()
+                    name_a, name_b = file_a.name, file_b.name
 
-    # 语音过滤选项
-    filter_speech = st.checkbox(
-        "🔇 过滤语音频带（300-3400Hz）",
-        value=False,
-        help="勾选后会去除人声频段的能量，使比对更专注于机械噪声特征。适合音频中混有人声干扰的场景。",
-    )
+                    samples_a, sr_a = try_decode_audio(bytes_a, name_a)
+                    samples_b, sr_b = try_decode_audio(bytes_b, name_b)
 
-    compare_clicked = st.button(
-        "🔬  开始比对",
-        type="primary",
-        use_container_width=True,
-        disabled=not (file_a and file_b),
-    )
+                    comp = compute_audio_similarity(samples_a, sr_a, samples_b, sr_b, filter_speech=filter_speech)
+                    # 保存到 session_state，供导出报告使用
+                    st.session_state.comparison_result = comp
+                    st.session_state.comparison_name_a = name_a
+                    st.session_state.comparison_name_b = name_b
+                    st.session_state.comp_report_html = None  # 清除旧报告缓存
+                    render_comparison(comp, name_a, name_b)
+                except Exception as e:
+                    st.error(f"❌ 比对失败: {e}")
 
-    if compare_clicked and file_a and file_b:
-        with st.spinner("正在提取噪声指纹并计算相似度..."):
-            try:
-                bytes_a, bytes_b = file_a.getvalue(), file_b.getvalue()
-                name_a, name_b = file_a.name, file_b.name
-
-                samples_a, sr_a = try_decode_audio(bytes_a, name_a)
-                samples_b, sr_b = try_decode_audio(bytes_b, name_b)
-
-                comp = compute_audio_similarity(samples_a, sr_a, samples_b, sr_b, filter_speech=filter_speech)
-                # 保存到 session_state，供导出报告使用
-                st.session_state.comparison_result = comp
-                st.session_state.comparison_name_a = name_a
-                st.session_state.comparison_name_b = name_b
-                st.session_state.comp_report_html = None  # 清除旧报告缓存
-                render_comparison(comp, name_a, name_b)
-            except Exception as e:
-                st.error(f"❌ 比对失败: {e}")
-
-    # ── 恢复上次比对结果（页面 rerun 时） ──
-    if st.session_state.get("comparison_result") and not compare_clicked:
-        render_comparison(
-            st.session_state.comparison_result,
-            st.session_state.get("comparison_name_a", ""),
-            st.session_state.get("comparison_name_b", ""),
-        )
+        # ── 恢复上次比对结果（页面 rerun 时） ──
+        if st.session_state.get("comparison_result") and not compare_clicked:
+            render_comparison(
+                st.session_state.comparison_result,
+                st.session_state.get("comparison_name_a", ""),
+                st.session_state.get("comparison_name_b", ""),
+            )
 
 
 def render_results(result: dict):
-    """渲染分析结果面板（浅色主题）"""
+    """渲染分析结果面板（卡片式布局）"""
 
-    st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
+    # ════ 评分大卡片 ════
+    sc = result["quality_score"]
+    if sc >= 80:
+        score_color, score_bg = "#059669", "#ecfdf5"
+    elif sc >= 60:
+        score_color, score_bg = "#d97706", "#fffbeb"
+    else:
+        score_color, score_bg = "#dc2626", "#fef2f2"
+
+    _html = f"""<div style='background:{score_bg};border:1.5px solid {score_color}30;border-radius:18px;
+        padding:28px;text-align:center;margin:0 0 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);'>
+      <div style='font-size:56px;font-weight:800;color:{score_color};letter-spacing:-2px;line-height:1;'>
+          {sc}<span style='font-size:26px;font-weight:600;color:#94a3b8;'>/100</span>
+      </div>
+      <div style='font-size:22px;font-weight:700;color:#0f172a;margin-top:6px;'>{result['quality_grade']}</div>
+      <div style='color:#475569;font-size:13px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;'>
+          <span>🔊 采样率 {result['sample_rate']}Hz</span><span style='color:#cbd5e1;'>|</span>
+          <span>⏱️ 时长 {result['duration']:.2f}s</span><span style='color:#cbd5e1;'>|</span>
+          <span>📁 {result['file_name']}</span>
+      </div>
+    </div>"""
+    st.markdown(_html, unsafe_allow_html=True)
 
     # ════ 统计指标行 ════
     c1, c2, c3, c4 = st.columns(4)
@@ -2168,32 +2149,9 @@ def render_results(result: dict):
                  help="最大振幅电平 — 采样点中的绝对最大值。接近 0dBFS 时可能存在削波失真（波形顶部被截断），一般应保留至少 3dB 余量。")
     with c3:
         st.metric("动态范围", f"{result['dynamic_range']:.1f} dB", delta_color="off",
-                 help='峰值与 RMS 的差值 — 衡量信号的起伏幅度。大动态范围说明有明显的强弱对比（如音乐中的轻柔段落与高潮）；过小说明信号比较"平"，缺乏层次感。')
+                 help='峰值与 RMS 的差值 — 衡量信号的起伏幅度。大动态范围说明有明显的强弱对比；过小说明信号比较"平"，缺乏层次感。')
     with c4:
         st.metric("检测缺陷", f"{len(result['defects'])} 项", delta_color="off")
-
-    # ════ 评分大卡片 ════
-    sc = result["quality_score"]
-    if sc >= 80:
-        score_color, score_bg = "#059669", "#ecfdf5"
-    elif sc >= 60:
-        score_color, score_bg = "#d97706", "#fffbeb"
-    else:
-        score_color, score_bg = "#dc2626", "#fef2f2"
-
-    _html = f"""<div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:18px;
-        padding:32px;text-align:center;margin:20px 0 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);'>
-      <div style='font-size:56px;font-weight:800;color:{score_color};letter-spacing:-2px;line-height:1;'>
-          {sc}<span style='font-size:26px;font-weight:600;color:#94a3b8;'>/100</span>
-      </div>
-      <div style='font-size:22px;font-weight:700;color:#0f172a;margin-top:6px;'>{result['quality_grade']}</div>
-      <div style='color:#94a3b8;font-size:13px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:14px;'>
-          <span>采样率 {result['sample_rate']}Hz</span><span>|</span>
-          <span>时长 {result['duration']:.2f}s</span><span>|</span>
-          <span>{result['file_name']}</span>
-      </div>
-    </div>"""
-    st.markdown(_html, unsafe_allow_html=True)
 
     # ════ 声学知识小贴士 ════
     with st.expander("📖 声学分析入门 — 工程师快速理解指南", expanded=False):
@@ -2242,7 +2200,13 @@ def render_results(result: dict):
 它能帮你发现"哪个频率在什么时刻出现"，对间歇性故障特别有用。
         """)
 
-    # ════ 图表 Tabs ════
+    # ════ 图表区卡片 ════
+    st.markdown("""
+    <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+        padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+        <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>📉 频谱可视化</div>
+    """, unsafe_allow_html=True)
+
     tab_wave, tab_spec, tab_stft = st.tabs(["📊 时域波形", "🎚️ 频率谱 (FFT)", "🌡️ STFT 时频谱"])
 
     with tab_wave:
@@ -2283,8 +2247,14 @@ def render_results(result: dict):
 </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("</div>", unsafe_allow_html=True)  # 关闭图表区卡片
+
     # ════ 频谱峰值 ════
-    st.subheader("📋  频谱峰值")
+    st.markdown("""
+    <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+        padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+        <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>📋 频谱峰值</div>
+    """, unsafe_allow_html=True)
     if result["spectrum_peaks"]:
         peak_data = [
             {"频率": f"{p['frequency']:.1f} Hz", "相对强度": f"{p['magnitude']*100:.1f}%", "频段": p["label"]}
@@ -2292,7 +2262,7 @@ def render_results(result: dict):
         ]
         st.dataframe(peak_data, use_container_width=True, hide_index=True)
         st.markdown("""
-<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-top:4px;color:#475569;font-size:13px;line-height:1.7;'>
+<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-top:8px;color:#475569;font-size:13px;line-height:1.7;'>
 <b>💡 峰值解读：</b>频谱中的"尖峰"就像指纹的"纹路"——是设备独有的特征频率。<br>
 • 同一台设备在不同时间录制，特征频率位置基本不变（只是幅度可能变化）<br>
 • 不同设备的峰值位置和组合通常不同，这就是"声纹识别"的基本原理<br>
@@ -2301,9 +2271,14 @@ def render_results(result: dict):
         """, unsafe_allow_html=True)
     else:
         st.info("未检测到明显峰值信号")
+    st.markdown("</div>", unsafe_allow_html=True)  # 关闭峰值卡片
 
     # ════ 缺陷诊断 ════
-    st.subheader("⚠️  缺陷诊断")
+    st.markdown("""
+    <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+        padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+        <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>⚠️ 缺陷诊断</div>
+    """, unsafe_allow_html=True)
     if result["defects"]:
         defect_data = []
         for d in result["defects"]:
@@ -2316,7 +2291,7 @@ def render_results(result: dict):
             })
         st.dataframe(defect_data, use_container_width=True, hide_index=True)
         st.markdown("""
-<div style='background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-top:4px;color:#7f1d1d;font-size:13px;line-height:1.7;'>
+<div style='background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-top:8px;color:#7f1d1d;font-size:13px;line-height:1.7;'>
 <b>⚠️ 缺陷诊断说明：</b>系统根据频谱异常特征自动判定可能的缺陷。<br>
 • <b>削波</b>：录音音量过大导致波形截断，信息丢失不可恢复，需降低增益重新录制<br>
 • <b>直流偏移</b>：波形整体偏离零线，通常由采集设备问题导致，不影响分析但需校准<br>
@@ -2326,6 +2301,7 @@ def render_results(result: dict):
         """, unsafe_allow_html=True)
     else:
         st.success("未检测到异常缺陷，音频信号质量良好")
+    st.markdown("</div>", unsafe_allow_html=True)  # 关闭缺陷卡片
 
     # ════ AI 分析 ════
     with st.expander("🤖  AI 智能分析报告", expanded=False):
@@ -2337,7 +2313,11 @@ def render_results(result: dict):
     # ════ 分析历史 ════
     history = st.session_state.analysis_history or []
     if history:
-        st.subheader("🕐  分析历史")
+        st.markdown("""
+        <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+            padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+            <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>🕐 分析历史</div>
+        """, unsafe_allow_html=True)
         n_cols = min(len(history), 5)
         hist_cols = st.columns(n_cols)
         for i, entry in enumerate(history):
@@ -2345,12 +2325,13 @@ def render_results(result: dict):
                 _sc = entry.get("score", 0)
                 _c = "#059669" if _sc >= 80 else ("#d97706" if _sc >= 60 else "#dc2626")
                 _hist = f"""
-<div style='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);'>
+<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center;'>
 <div style='font-size:11px;color:#94a3b8;margin-bottom:4px;'>{entry['time']}</div>
 <div style='font-size:12.5px;color:#1e293b;font-weight:500;' title="{entry['name']}">{entry['name'][:14]}{'...' if len(entry['name']) > 14 else ''}</div>
 <div style='font-size:14px;font-weight:700;color:{_c};margin-top:6px;'>{entry['grade']} &middot; {_sc}分</div>
 </div>"""
                 st.markdown(_hist, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)  # 关闭历史卡片
 
 
 # ──────────────────────── 音频比对 UI ────────────────────────
@@ -2618,14 +2599,7 @@ td {{ padding:10px 14px; border-bottom:1px solid #f1f5f9; }}
 
 
 def render_comparison(comp: dict, name_a: str, name_b: str):
-    """渲染音频比对结果"""
-
-    st.markdown("---")
-    st.subheader("🔗  音频噪声指纹比对结果")
-
-    # ── 语音过滤提示 ──
-    if comp.get("filter_speech"):
-        st.info("🔊 已启用语音频带过滤（300-3400Hz），比对结果排除了人声干扰，专注于机械噪声特征。")
+    """渲染音频比对结果（卡片式布局）"""
 
     # ── 结论大卡片 ──
     overall = comp["overall_similarity"]
@@ -2643,7 +2617,7 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
         icon = "🔴"
 
     _card = f"""<div style='background:{bg};border:1.5px solid {color}30;border-radius:18px;
-        padding:32px;text-align:center;margin:20px 0 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);'>
+        padding:28px;text-align:center;margin:0 0 20px;box-shadow:0 2px 12px rgba(0,0,0,0.05);'>
       <div style='font-size:16px;color:#64748b;margin-bottom:8px;'>综合噪声指纹相似度</div>
       <div style='font-size:64px;font-weight:800;color:{color};letter-spacing:-3px;line-height:1;'>
           {overall}<span style='font-size:28px;font-weight:600;color:#94a3b8;'>%</span>
@@ -2651,13 +2625,22 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
       <div style='font-size:24px;font-weight:700;color:{color};margin-top:8px;'>
           {icon} {comp['conclusion']}
       </div>
-      <div style='color:#475569;font-size:14px;margin-top:12px;max-width:520px;margin-left:auto;margin-right:auto;'>
+      <div style='color:#475569;font-size:14px;margin-top:10px;max-width:520px;margin-left:auto;margin-right:auto;'>
           {comp['conclusion_detail']}
       </div>
     </div>"""
     st.markdown(_card, unsafe_allow_html=True)
 
+    # ── 语音过滤提示 ──
+    if comp.get("filter_speech"):
+        st.info("🔊 已启用语音频带过滤（300-3400Hz），比对结果排除了人声干扰，专注于机械噪声特征。")
+
     # ── 分项指标 ──
+    st.markdown("""
+    <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+        padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+        <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>📋 特征相似度得分</div>
+    """, unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.metric("LFCC 相似度", f"{comp['lfcc_similarity']}%",
@@ -2671,6 +2654,7 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
     with c4:
         st.metric("谐波指纹", f"{comp['harmonic_similarity']}%",
                   help="特征频率峰的匹配 + 谐波频率比结构比对 — 最核心的指标，类似 DNA 比对，即使两段录音转速不同也能识别同源设备。")
+    st.markdown("</div>", unsafe_allow_html=True)  # 关闭指标卡片
 
     # ── 分项指标通俗解读 ──
     st.markdown("""
@@ -2687,46 +2671,58 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
     sig_a, sig_b = comp["sig_a"], comp["sig_b"]
     peaks_a, peaks_b = sig_a["harmonic_peaks"], sig_b["harmonic_peaks"]
     if peaks_a or peaks_b:
-        with st.expander("🎵 谐波峰详情", expanded=False):
-            pa_cols, pb_cols = st.columns(2)
-            with pa_cols:
-                st.markdown(f"**音频 A — {name_a[:20]}**")
-                if peaks_a:
-                    for i, p in enumerate(peaks_a[:8]):
-                        st.markdown(f"  {i+1}. **{p['freq']:.1f} Hz** — {p['label']} (幅度 {p['magnitude']*100:.1f}%)")
-                    if sig_a["harmonic_ratios"]:
-                        st.caption(f"谐波比: {', '.join(f'{r}×' for r in sig_a['harmonic_ratios'][:5])}")
-                else:
-                    st.caption("未检测到明显谐波峰")
-            with pb_cols:
-                st.markdown(f"**音频 B — {name_b[:20]}**")
-                if peaks_b:
-                    for i, p in enumerate(peaks_b[:8]):
-                        st.markdown(f"  {i+1}. **{p['freq']:.1f} Hz** — {p['label']} (幅度 {p['magnitude']*100:.1f}%)")
-                    if sig_b["harmonic_ratios"]:
-                        st.caption(f"谐波比: {', '.join(f'{r}×' for r in sig_b['harmonic_ratios'][:5])}")
-                else:
-                    st.caption("未检测到明显谐波峰")
+        st.markdown("""
+        <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+            padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+            <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>🎵 谐波峰详情</div>
+        """, unsafe_allow_html=True)
+        pa_cols, pb_cols = st.columns(2)
+        with pa_cols:
+            st.markdown(f"**音频 A — {name_a[:20]}**")
+            if peaks_a:
+                for i, p in enumerate(peaks_a[:8]):
+                    st.markdown(f"  {i+1}. **{p['freq']:.1f} Hz** — {p['label']} (幅度 {p['magnitude']*100:.1f}%)")
+                if sig_a["harmonic_ratios"]:
+                    st.caption(f"谐波比: {', '.join(f'{r}×' for r in sig_a['harmonic_ratios'][:5])}")
+            else:
+                st.caption("未检测到明显谐波峰")
+        with pb_cols:
+            st.markdown(f"**音频 B — {name_b[:20]}**")
+            if peaks_b:
+                for i, p in enumerate(peaks_b[:8]):
+                    st.markdown(f"  {i+1}. **{p['freq']:.1f} Hz** — {p['label']} (幅度 {p['magnitude']*100:.1f}%)")
+                if sig_b["harmonic_ratios"]:
+                    st.caption(f"谐波比: {', '.join(f'{r}×' for r in sig_b['harmonic_ratios'][:5])}")
+            else:
+                st.caption("未检测到明显谐波峰")
+        st.markdown("</div>", unsafe_allow_html=True)  # 关闭谐波峰卡片
 
-    # ── 音频信息 ──
+    # ── 音频信息卡片 ──
     st.markdown(f"""
-    <div style='display:flex;gap:24px;justify-content:center;margin:12px 0 20px;flex-wrap:wrap;'>
-      <div style='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 20px;text-align:center;min-width:180px;'>
-        <div style='font-size:12px;color:#94a3b8;'>音频 A</div>
-        <div style='font-size:14px;font-weight:600;color:#1e293b;margin-top:4px;'>{name_a[:24]}</div>
-        <div style='font-size:12px;color:#64748b;margin-top:2px;'>时长 {comp['duration_a']:.2f}s</div>
+    <div style='display:flex;gap:16px;justify-content:center;margin:16px 0 24px;flex-wrap:wrap;'>
+      <div style='background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:16px 22px;text-align:center;min-width:180px;box-shadow:0 1px 4px rgba(0,0,0,0.04);'>
+        <div style='font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;'>音频 A</div>
+        <div style='font-size:14px;font-weight:600;color:#1e293b;margin-top:4px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' title="{name_a}">{name_a[:24]}</div>
+        <div style='font-size:12px;color:#64748b;margin-top:2px;'>⏱️ 时长 {comp['duration_a']:.2f}s</div>
       </div>
-      <div style='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 20px;text-align:center;min-width:180px;'>
-        <div style='font-size:12px;color:#94a3b8;'>音频 B</div>
-        <div style='font-size:14px;font-weight:600;color:#1e293b;margin-top:4px;'>{name_b[:24]}</div>
-        <div style='font-size:12px;color:#64748b;margin-top:2px;'>时长 {comp['duration_b']:.2f}s</div>
+      <div style='display:flex;align-items:center;color:#94a3b8;font-size:20px;'>⟷</div>
+      <div style='background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:16px 22px;text-align:center;min-width:180px;box-shadow:0 1px 4px rgba(0,0,0,0.04);'>
+        <div style='font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;'>音频 B</div>
+        <div style='font-size:14px;font-weight:600;color:#1e293b;margin-top:4px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' title="{name_b}">{name_b[:24]}</div>
+        <div style='font-size:12px;color:#64748b;margin-top:2px;'>⏱️ 时长 {comp['duration_b']:.2f}s</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── 图表 Tabs ──
+    # ── 图表区卡片 ──
+    st.markdown("""
+    <div style='background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;
+        padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);'>
+        <div style='font-size:15px;font-weight:700;color:#0f172a;margin-bottom:12px;'>📉 可视化对比</div>
+    """, unsafe_allow_html=True)
+
     tab_radar, tab_lfcc, tab_overlay, tab_bands = st.tabs(
-        ["🎯 相似度雷达图", "📊 LFCC 对比", "🎚️ 频谱叠加", "📈 子带能量"]
+        ["🎯 雷达图", "📊 LFCC", "🎚️ 频谱叠加", "📈 子带能量"]
     )
 
     with tab_radar:
@@ -2784,6 +2780,8 @@ def render_comparison(comp: dict, name_a: str, name_b: str):
 • 能量"重心"偏左 → 低频为主（大质量振动）；偏右 → 高频为主（小部件/气蚀）
 </div>
         """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)  # 关闭图表区卡片
 
     # ── 导出 HTML 报告 ──
     st.markdown("---")
